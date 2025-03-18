@@ -1,6 +1,14 @@
 #ifndef LED_SETUP_H
 #define LED_SETUP_H
 
+/*************************************************
+ * @file: led_setup.h
+ *
+ * This is the header file for led_setup.c
+ * Gives access to the functions in led_setup.c for main.c
+ ******************************************************
+ */
+
 #include <stdint.h>
 
 // Configure PC0..PC1 as input pull-ups for buttons.
