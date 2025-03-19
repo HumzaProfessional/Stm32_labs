@@ -98,19 +98,16 @@ void configureSysTick(void)
  */
 void SysTick_Handler(void)
 {
-    // 1) Poll buttons on PC0 and PC1 (active-low: 0 = pressed)
-    uint8_t btn0 = ((GPIOC->IDR & (1UL << 0)) == 0) ? 0 : 1;
-    uint8_t btn1 = ((GPIOC->IDR & (1UL << 1)) == 0) ? 0 : 1;
+    
+    if ((GPIOC->IDR & (1UL << 0)) == 0) {
+    // If PC0 is pressed (active low), set direction to 0 - right to left
+    direction = 0;
+}
+  if ((GPIOC->IDR & (1UL << 1)) == 0) {
+    // If PC1 is pressed (active low), set direction to 1 - left to right
+    direction = 1;
+}
 
-    // Update direction based on button press:
-    // If PC0 is pressed, set direction to 0 (right-to-left)
-    if (btn0 == 0) {
-        direction = 0;
-    }
-    // If PC1 is pressed, set direction to 1 (left-to-right)
-    if (btn1 == 0) {
-        direction = 1;
-    }
 
     // 2) Shift the LED pattern based on the current direction.
     if (direction == 1) {  // left-to-right shifting
