@@ -1,4 +1,5 @@
 
+
 #include "stm32l476xx.h"
 #include "led_setup.h"
 
@@ -21,9 +22,9 @@
 
 // Speed values (reload values for SysTick) for different speeds:
 // FAST: ~ (4MHz/8)-1, MEDIUM: ~ (4MHz/12)-1, SLOW: ~ (4MHz/20)-1.
-#define SLOW   ((SYS_CLK_FREQ / 4) - 1)
-#define MEDIUM ((SYS_CLK_FREQ / 8) - 1)
-#define FAST   ((SYS_CLK_FREQ / 16) - 1)
+#define SLOW   ((SYS_CLK_FREQ / 5) - 1)
+#define MEDIUM ((SYS_CLK_FREQ / 10) - 1)
+#define FAST   ((SYS_CLK_FREQ / 15) - 1)
 
 // Create an array of speeds
 static const uint32_t speeds[] = {SLOW, MEDIUM, FAST};
@@ -57,6 +58,7 @@ struct button buttons[NUM_BUTTONS] = {
 static volatile uint8_t ledPattern = 0x01; // start PC8 lit
 static volatile uint8_t led_mode = SINGLE_LED_MODE;
 static volatile uint8_t direction  = 1;
+static volatile uint8_t blinkstate;
 
 extern volatile uint8_t led_mode;
 extern volatile uint8_t ledPattern; // allows access to this integer to led_setup
@@ -83,6 +85,18 @@ int main(void)
       {
           // Continuously write the current pattern to the pins
           update_LEDs_PC6to13(ledPattern, led_mode);
+          // Poll buttons with a delay for debounce.
+              if (((GPIOC->IDR & (1UL << 0)) == 0) && ((GPIOC->IDR & (1UL << 1)) == 0))
+              {
+                  // Both buttons pressed: toggle mode.
+                  if (led_mode == SINGLE_LED_MODE)
+                      led_mode = FLASH_LED_MODE;
+                  else
+                      led_mode = SINGLE_LED_MODE;
+
+                  // Wait a little to avoid repeated toggling.
+                  for (volatile int i = 0; i < 500000; i++);
+              }
 
       }
   }
@@ -123,7 +137,6 @@ void SysTick_Handler(void)
 {
     // Only update the pattern if we are in SINGLE_LED_MODE.
     if (led_mode == SINGLE_LED_MODE) {
-
         // Check the right button (PC0) for right-to-left shift.
         if ((GPIOC->IDR & (1UL << 0)) == 0) {
             // PC0 pressed: shift right (i.e., move LED from a lower-numbered pin to a higher-numbered one)
@@ -197,6 +210,8 @@ void EXTI1_IRQHandler(void)
 // and toggles led_mode if both buttons are pressed.
 void handleDualButtonPress(void)
 {
+	for(volatile int i = 0; i < 1000; i++)
+	{
     // Check PC0 and PC1 directly.
     if (((GPIOC->IDR & (1UL << 0)) == 0) && ((GPIOC->IDR & (1UL << 1)) == 0))
     {
@@ -209,6 +224,7 @@ void handleDualButtonPress(void)
         {
             led_mode = SINGLE_LED_MODE;
         }
-    }
-    // Optionally clear pending EXTI interrupts here if using EXTI.
+     }
+	}
 }
+
