@@ -3,14 +3,14 @@
 #include "led_setup.h"
 
 /**
- ******************************************8
+ ******************************************
  * @file main.c
  * @brief main program
- * @ author Humza Rana & Mac
+ * @author Humza Rana & Mac
  * @Lab 4:
  * @Class: CPE 3000
  * -----------------------------------------------------
- *  In this lab, pins are enabled to light leds.
+ *  In this lab, pins are enabled to light leds in two modes:
  *  Two buttons are enabled to trigger a Systick interrupt.
  *  A integer called pattern is used to determine what leds are triggered.
  *  Systick, defined speeds, and an array are used to determine the
@@ -21,9 +21,9 @@
 
 // Speed values (reload values for SysTick) for different speeds:
 // FAST: ~ (4MHz/8)-1, MEDIUM: ~ (4MHz/12)-1, SLOW: ~ (4MHz/20)-1.
-#define SLOW   ((SYS_CLK_FREQ / 6) - 1)
-#define MEDIUM ((SYS_CLK_FREQ / 12) - 1)
-#define FAST   ((SYS_CLK_FREQ / 20) - 1)
+#define SLOW   ((SYS_CLK_FREQ / 4) - 1)
+#define MEDIUM ((SYS_CLK_FREQ / 8) - 1)
+#define FAST   ((SYS_CLK_FREQ / 16) - 1)
 
 // Create an array of speeds
 static const uint32_t speeds[] = {SLOW, MEDIUM, FAST};
@@ -73,7 +73,7 @@ int main(void)
 {
     // 1) Initialize PC0 and PC1 as inputs, PC8..PC15 as outputs
     init_Buttons();          // from led_setup
-    init_LEDs_PC8to15();     // from led_setup
+    init_LEDs_PC6to13();     // from led_setup
 
     configureSysTick(); // function in main.c
         // 4) Start SysTick
@@ -82,7 +82,7 @@ int main(void)
     while (1)
       {
           // Continuously write the current pattern to the pins
-          update_LEDs_PC8to15(ledPattern, led_mode);
+          update_LEDs_PC6to13(ledPattern, led_mode);
 
       }
   }
@@ -154,10 +154,33 @@ void SysTick_Handler(void)
             }
         }
     }
+    else if (led_mode == FLASH_LED_MODE) {
+            // FLASH_LED_MODE: Toggle between the lower and upper four LEDs.
+            if (ledPattern == 0x0F) {
+                ledPattern = 0xF0;  // Upper 4 LEDs on (PC12..PC15)
+            } else {
+                ledPattern = 0x0F;  // Lower 4 LEDs on (PC8..PC11)
+            }
+
+            // Adjust flash rate based on button input:
+            // If PC0 is pressed, decrease the flash rate.
+            if ((GPIOC->IDR & (1UL << 0)) == 0) {
+                speedIndex--;
+                if (speedIndex < 0) {
+                    speedIndex = 2;  // wrap to last index (array has 3 speeds: 0,1,2)
+                }
+                SysTick->LOAD = speeds[speedIndex];
+            }
+            // If PC1 is pressed, increase the flash rate.
+            if ((GPIOC->IDR & (1UL << 1)) == 0) {
+                speedIndex++;
+                if (speedIndex > 2) {
+                    speedIndex = 0;  // wrap back to first index
+                }
+                SysTick->LOAD = speeds[speedIndex];
+            }
+        }
 }
-
-
-
 // EXTI0_IRQHandler for PC0 (right button)
 void EXTI0_IRQHandler(void)
 {
@@ -174,16 +197,18 @@ void EXTI1_IRQHandler(void)
 // and toggles led_mode if both buttons are pressed.
 void handleDualButtonPress(void)
 {
-    // Read left button (index left_button) from PC1 and right button (index right_button) from PC0.
-    uint8_t leftState  = ((buttons[left_button].port->IDR & (0UL << buttons[left_button].pin)) == 0);
-    uint8_t rightState = ((buttons[right_button].port->IDR & (1UL << buttons[right_button].pin)) == 0);
-
-    // If both buttons are pressed (active low: 0 means pressed)
-    if (leftState && rightState)
+    // Check PC0 and PC1 directly.
+    if (((GPIOC->IDR & (1UL << 0)) == 0) && ((GPIOC->IDR & (1UL << 1)) == 0))
     {
-        // Toggle LED mode:
-        // For example, if the current mode is MOVE_LED_MODE, switch to FLASH_LED_MODE; otherwise, switch to MOVE_LED_MODE.
-        led_mode = (led_mode == SINGLE_LED_MODE) ? FLASH_LED_MODE : SINGLE_LED_MODE;
+        // Both buttons are pressed (active-low), so toggle led_mode.
+        if (led_mode == SINGLE_LED_MODE)
+        {
+            led_mode = FLASH_LED_MODE;
+        }
+        else
+        {
+            led_mode = SINGLE_LED_MODE;
+        }
     }
-
+    // Optionally clear pending EXTI interrupts here if using EXTI.
 }
