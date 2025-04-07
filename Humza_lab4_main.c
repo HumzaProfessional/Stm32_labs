@@ -1,5 +1,4 @@
 
-
 #include "stm32l476xx.h"
 #include "led_setup.h"
 
@@ -11,10 +10,11 @@
  * @Lab 4:
  * @Class: CPE 3000
  * -----------------------------------------------------
- *  In this lab, pins are enabled to light leds in two modes:
- *  Two buttons are enabled to trigger a Systick interrupt.
- *  A integer called pattern is used to determine what leds are triggered.
- *  Systick, defined speeds, and an array are used to determine the
+ *  In this lab, pins are enabled to light leds in two modes: SINGLE_LED_MODE and FLASH_LEDMODE
+ *  Two buttons are enabled to trigger a Systick interrupt and EXTI interupts for both buttons.
+ *  A integer called pattern is used to determine what leds are lit depeding on the mode.
+ *  Systick, defined speeds, and an array are used to determine the speed of frequency of events.
+ * A form of debouncing is used to resolve noise between button presses.
  */
 
 #define SYS_CLK_FREQ 4000000 // determines the frequency of Systick
@@ -127,9 +127,9 @@ void configureSysTick(void)
  * @return: none
  *
  * Enables the buttons to interrupt based on whether or not the two buttons are active low.
- * Determines the direction through that logic.
- * Then it checks if the pattern is at the farthest left or right side.
- * If so, the speedIndex is changes to the next speed.
+ * Changes depending on if led_mode is in SINGLE_LED_MODE or FLASH_LED.
+ * In SINGLE_LED_MODE, the buttons trigger left or right direction changes of the lit led.
+ * If it passed the farthest left or right led, the rate of led
  * Resets once it passed the FAST speed.
  *==================================================================
  */
@@ -167,6 +167,7 @@ void SysTick_Handler(void)
             }
         }
     }
+
     else if (led_mode == FLASH_LED_MODE) {
             // FLASH_LED_MODE: Toggle between the lower and upper four LEDs.
             if (ledPattern == 0x0F) {
@@ -194,37 +195,61 @@ void SysTick_Handler(void)
             }
         }
 }
-// EXTI0_IRQHandler for PC0 (right button)
+/*==================================================================
+ * EXTI0_IRQHANDLER()
+ *
+ * @param: none
+ * @return: none
+ *
+ * Trigger EXTI interrupt for port-C pin 0 (right button)
+ * Check if both buttons are being pressed.
+ *==================================================================*/
 void EXTI0_IRQHandler(void)
 {
     handleDualButtonPress();
 }
-
-// EXTI1_IRQHandler for PC1 (left button)
+/*==================================================================
+ * EXTI_IRQHANDLER()
+ *
+ * @param: none
+ * @return: none
+ *
+ * Trigger EXTI interrupt for port-C pin 1(left button)
+ * Also checks if both buttons are pressed.
+ *==================================================================*/
 void EXTI1_IRQHandler(void)
 {
     handleDualButtonPress();
 }
 
-// This function reads the buttons using the 'buttons' struct array
-// and toggles led_mode if both buttons are pressed.
+/*==================================================================
+ * handleDualButtonPress(void)
+ *
+ * @param: none
+ * @return: none
+ *
+ * Triggered by the EXTI interrupts, check with in a delay rate.
+ * If both buttons are pressed within the delay rate, logic for mode switching is triggered.
+ *==================================================================*/
+
 void handleDualButtonPress(void)
 {
-	for(volatile int i = 0; i < 1000; i++)
+	for(volatile int i = 0; i < 1000; i++) // recursive delay meant to detect the button presses
 	{
-    // Check PC0 and PC1 directly.
+    // Check PC0 and PC1 have been pressed during the delay rate
     if (((GPIOC->IDR & (1UL << 0)) == 0) && ((GPIOC->IDR & (1UL << 1)) == 0))
     {
-        // Both buttons are pressed (active-low), so toggle led_mode.
+        // Both buttons are pressed (active-low), so toggle if statement
         if (led_mode == SINGLE_LED_MODE)
         {
-            led_mode = FLASH_LED_MODE;
+            led_mode = FLASH_LED_MODE; // switch to other mode
         }
-        else
+        else if (led_mode == FLASH_LED_MODE)
         {
-            led_mode = SINGLE_LED_MODE;
-        }
-     }
-	}
-}
+            led_mode = SINGLE_LED_MODE; // stay in the same mode
+            ledPattern = 0x01;
 
+     }
+   }
+ }
+}
