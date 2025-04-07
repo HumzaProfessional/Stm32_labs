@@ -5,14 +5,12 @@
  * @ file: led_setup.c
  *
  *This file is for setups the leds and buttons.
- *It also determined which led is on.
- *This is accomplished by clearing all the bits from pc8 - 15.
+ *It also determined which led is on, depending on the state of led_mode integer.
+ *This is accomplished by clearing all the bits from pc6 - 13.
  *Then using logical OR with an global variable called pattern from main.c
- * Logical AND is used between the integer pattern and
- *
+ * 
  **************************************************
  */
-
 
 
 /*=========================================================================================
@@ -44,8 +42,8 @@ void init_Buttons(void)
  *
  * @param: none
  * @return: none
- *  Configure PC8..PC15 as outputs (push-pull, low speed, no pull).
- *  defined constants aren't used since doing a for loop is more compact
+ *  Configure PC6..PC13 as outputs (push-pull, low speed, no pull).
+ *  Defined constants aren't used since doing a for loop is more compact.
 ===============================================================================
 */
 
@@ -54,7 +52,7 @@ void init_LEDs_PC6to13(void)
     // 1) Enable clock for GPIOC
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN;
 
-    // 2) Loop through pins 8..15
+    // 2) Loop through pins 6..13
     for (int pin = 6; pin <= 13; pin++)
     {
         // Output mode => '01' in MODER
@@ -74,12 +72,13 @@ void init_LEDs_PC6to13(void)
 
 /*=========================================================================================
  *  @parameter: uint8_t ledPattern - integer that determines what led is lit.
- *              uint8_t led_mode - integer that determine whether the leds are in FLASH_MODE ot SINGLE_MODE
+ *              uint8_t led_mode - integer that determine whether the leds are in FLASH_MODE or SINGLE_MODE
  *  @ return: none
  *
  * Write an 8-bit pattern to PC6..PC13 (bit0 => PC6 and bit7 => PC13).
  * Is responsible for the pattern
  * Variable unint_8 pattern is a global variable accessed from main.c.
+ * So is led_mode which determines how the led range should behave.
  ===========================================================================================
  */
 void update_LEDs_PC6to13(uint8_t ledPattern, uint8_t led_mode)
@@ -90,6 +89,8 @@ void update_LEDs_PC6to13(uint8_t ledPattern, uint8_t led_mode)
     if (led_mode == SINGLE_LED_MODE) {
         // Write the given pattern to PC6..PC13.
         GPIOC->ODR |= ((ledPattern & 0xFF) << 6);
+
+
     }
     else if (led_mode == FLASH_LED_MODE) {
         // For flashing mode, use 'pattern' as a simple toggle indicator.
