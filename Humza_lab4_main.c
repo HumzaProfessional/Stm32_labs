@@ -75,7 +75,7 @@ int main(void)
                       led_mode = FLASH_LED_MODE;
                   else
                       led_mode = SINGLE_LED_MODE;
-
+                      ledPattern = 0x01;
                   // Wait a little to avoid repeated toggling.
                   for (volatile int i = 0; i < 500000; i++);
               }
