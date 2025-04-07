@@ -31,26 +31,6 @@ static const uint32_t speeds[] = {SLOW, MEDIUM, FAST};
 static volatile int speedIndex = 0; // variable used for determined the speed
 
 
-struct button
-{
-    uint32_t filter;
-    uint32_t state;
-    GPIO_TypeDef* port;
-    uint32_t pin;
-};
-
-#define NUM_BUTTONS 2
-#define left_button  0
-#define right_button 1
-
-struct button buttons[NUM_BUTTONS] = {
-    {0, 0, GPIOC, 1},
-    {0, 0, GPIOC, 0}
-};
-
-
-
-
 // Start SysTick
 #define START_SYSTICK()     (SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk)
 
