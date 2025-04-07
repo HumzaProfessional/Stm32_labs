@@ -50,7 +50,9 @@ void EXTI0_IRQHandler(void);
 void EXTI1_IRQHandler(void);
 void handleDualButtonPress(void);
 
-
+//--------------------------------------------------------------------------------
+// main()
+//---------------------------------------------------------------------------------
 int main(void)
 {
     // 1) Initialize PC0 and PC1 as inputs, PC8..PC15 as outputs
