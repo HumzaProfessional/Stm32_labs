@@ -10,7 +10,7 @@ int moveRight()
 int moveLeft()
 
 void serve()
-
+// fist funciton state
 void score(int)
 
 
