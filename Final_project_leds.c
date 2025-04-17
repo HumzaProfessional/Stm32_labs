@@ -18,22 +18,23 @@
 #define FLASH_LED_MODE  1
 
 volatile uint8_t ledPattern = 0x01; // start PC8 lit
- volatile uint8_t led_mode = SINGLE_LED_MODE;
- 
- static uint8_t currentServer = 1;  // 1 = Blue Player 1, 0 = Red Player 
+ volatile uint8_t led_mode = PLAY_MODE;
+
+ static uint8_t currentServer = 1;  // 1 = Blue Player 1, 0 = Red Player
  volatile uint8_t player1Score = 0;
  volatile uint8_t player2Score = 0;
+static uint8_t winner = 0;
 
- 
  // state machine states of PLAY_MODE
  typedef enum {
      STATE_SERVE,
      STATE_SHIFT_LEFT,
      STATE_SHIFT_RIGHT,
      STATE_CHECK_LEFT_HIT,
-     STATE_CHECK_RIGHT_HIT
+     STATE_CHECK_RIGHT_HIT,
+	 STATE_WIN
  } GameState;
- 
+
 /*=============================================================================
  * init_LEDs()
  *
@@ -68,21 +69,20 @@ void init_LEDs_PC6to13(void)
         GPIOC->PUPDR   &= ~(3UL << (pin * 2));
     }
 
-    //-------------------------------blue player score----------------------------------
-    // Clear mode bits for PC15, PC2, PC3 (set as output)
-    GPIOC->MODER &= ~(GPIO_MODER_MODE15 | GPIO_MODER_MODE2 | GPIO_MODER_MODE3);
-    GPIOC->MODER |=  (GPIO_MODER_MODE15_0 | GPIO_MODER_MODE2_0 | GPIO_MODER_MODE3_0);
+    //-------------------------------blue: player 1 score----------------------------------
+    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
 
-    // Set output type to push-pull
-    GPIOC->OTYPER &= ~(GPIO_OTYPER_OT15 | GPIO_OTYPER_OT2 | GPIO_OTYPER_OT3);
+    GPIOA->MODER &= ~(GPIO_MODER_MODE13 | GPIO_MODER_MODE14 | GPIO_MODER_MODE15);
+    GPIOA->MODER |=  (GPIO_MODER_MODE13_0 | GPIO_MODER_MODE14_0 | GPIO_MODER_MODE15_0);
 
-    //  Set to low speed
-    GPIOC->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED15 | GPIO_OSPEEDR_OSPEED2 | GPIO_OSPEEDR_OSPEED3);
+    GPIOA->OTYPER  &= ~(GPIO_OTYPER_OT13 | GPIO_OTYPER_OT14 | GPIO_OTYPER_OT15);
 
-    //  No pull-up/pull-down
-    GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPD15 | GPIO_PUPDR_PUPD2 | GPIO_PUPDR_PUPD3);
+    GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED13 | GPIO_OSPEEDR_OSPEED14 | GPIO_OSPEEDR_OSPEED15);
 
-    //--------------------------------red player score--------------------------------
+    GPIOA->PUPDR   &= ~(GPIO_PUPDR_PUPD13 | GPIO_PUPDR_PUPD14 | GPIO_PUPDR_PUPD15);
+
+
+    //--------------------------------red: player 2 score--------------------------------
     // Clear mode bits for PC15, PC2, PC3 (set as output)
     GPIOC->MODER &= ~(GPIO_MODER_MODE15 | GPIO_MODER_MODE2 | GPIO_MODER_MODE3);
     GPIOC->MODER |=  (GPIO_MODER_MODE15_0 | GPIO_MODER_MODE2_0 | GPIO_MODER_MODE3_0);
@@ -129,12 +129,12 @@ void update_LEDs_PC6to13(uint8_t ledPattern, uint8_t led_mode)
         GPIOC->ODR |= ((ledPattern & 0xFF) << 5);
 
     }
-  
+
 }
 
 void playMode(void)
 {
-    switch (gameState) {
+    switch (GameState) {
 
         case STATE_SERVE:
             serve();
@@ -211,17 +211,25 @@ void serve(void)
     ballServed = 1;
 }
 
-void score(int whoScored)  // 1 = player 1, 0 = player 2
+void score(int whoScored)  // 1 = Player 1, 0 = Player 2
 {
     if (whoScored == 1) {
         player1Score++;
         displayPlayerScore(player1Score, 1);
+        if (player1Score >= 3) {
+            winner = 1;
+            gameState = STATE_WIN;
+        }
     } else {
         player2Score++;
         displayPlayerScore(player2Score, 2);
+        if (player2Score >= 3) {
+            winner = 2;
+            gameState = STATE_WIN;
+        }
     }
-
 }
+
 
 void displayPlayerScore(uint8_t score, uint8_t player)
 {
