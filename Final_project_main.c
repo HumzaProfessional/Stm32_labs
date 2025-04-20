@@ -3,22 +3,20 @@
 #include "led_setup.h"
 #include "buttons.h"
 
-/* ==============================================================================
- * @file: main.c
- * @brief: main program
- * @ author: Humza Rana & Mac
- * @Lab 4: 1D pong using leds
+/**
+ ******************************************
+ * @file main.c
+ * @brief main program
+ * @author Humza Rana & Mac
+ * @Lab 4:
  * @Class: CPE 3000
  * -----------------------------------------------------
- *  In this lab, pins are enabled and buttons are used to simulate playing pong.
- *  Two buttons are enabled to trigger a Systick interrupt.
- *  This interrupt determines if the player has "swung" or served(if in the serving state)
- *  State machines are used to determine the following: what state the game is in such as serving.
- *
- * 
- * =================================================================================
+ *  In this lab, pins are enabled to light leds in two modes: SINGLE_LED_MODE and FLASH_LEDMODE
+ *  Two buttons are enabled to trigger a Systick interrupt and EXTI interupts for both buttons.
+ *  A integer called pattern is used to determine what leds are lit depeding on the mode.
+ *  Systick, defined speeds, and an array are used to determine the speed of frequency of events.
+ * A form of debouncing is used to resolve noise between button presses.
  */
-
 
 #define SYS_CLK_FREQ 4000000 // determines the frequency of Systick
 #define SYSTICK_10HZ   ((SYS_CLK_FREQ / 20) - 1) // Initial frequency rate
@@ -46,7 +44,7 @@ static uint32_t msTimer = 0;
 int main(void)
 {
     init_Buttons();
-    init_LEDs_PC6to13();  // Consider renaming to reflect PC5–PC12
+    init_LEDs_PC5to12();
 
     configureSysTick();
     START_SYSTICK();
@@ -91,12 +89,13 @@ int main(void)
                 else
                     ledPattern = 0x0F;
 
-                update_LEDs_PC6to13(ledPattern, led_mode);  // This lights PC5–PC12
+                update_LEDs_PC5to12(ledPattern, led_mode);  // This lights PC5–PC12
                 blinkTimer = 0;
             }
         }
     }
 }
+
 
 /*==================================================================
  * configureSystick()
@@ -166,3 +165,4 @@ void SysTick_Handler(void)
 	        }
 	    }
 }
+
