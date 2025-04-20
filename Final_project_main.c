@@ -46,36 +46,41 @@ static uint32_t msTimer = 0;
 int main(void)
 {
 
-    init_Buttons();
-    init_LEDs_PC6to13();
+init_Buttons();
+init_LEDs_PC5to12();  //
 
-    configureSysTick();
-    START_SYSTICK();
+ configureSysTick();
+START_SYSTICK();
 
-    uint8_t prevUserBtn = 1;
+uint8_t prevUserBtn = 1;
 
-       while (1)
-       {
-           uint8_t currUserBtn = buttons[BTN_USER].state;
+while (1)
+    {
+        // Read debounced state from SysTick debounce filter
+        uint8_t currUserBtn = buttons[BTN_USER].state;
 
-           // Detect release (rising edge)
-           if (prevUserBtn == 0 && currUserBtn == 1) {
-               if (led_mode == PLAY_MODE)
-                   led_mode = FLASH_LED_MODE;
-               else
-                   led_mode = PLAY_MODE;
+        // Rising edge detection (button released)
+        if (prevUserBtn == 0 && currUserBtn == 1) {
+            led_mode = (led_mode == PLAY_MODE) ? FLASH_LED_MODE : PLAY_MODE;
 
-               GPIOC->ODR &= ~(0xFF << 6);  // Clear LEDs
-           }
+            // Clear playfield
+            GPIOC->ODR &= ~(0xFF << 5);  // ✅ PC5–PC12
+        }
 
-           prevUserBtn = currUserBtn;
+        prevUserBtn = currUserBtn;
 
-           if (led_mode == PLAY_MODE) {
-               playMode();
-           } else {
-               // FLASH_LED_MODE animation here
-           }
-       }
+        if (led_mode == PLAY_MODE) {
+            playMode();  // game logic, LED shifting, scoring, etc.
+        } else if (led_mode == FLASH_LED_MODE) {
+            // Optional flashing pattern (e.g. alternate halves)
+            static uint32_t blinkTimer = 0;
+            if (++blinkTimer > 100000) {
+                ledPattern = (ledPattern == 0x0F) ? 0xF0 : 0x0F;
+                update_LEDs_PC6to13(ledPattern, led_mode);
+                blinkTimer = 0;
+            }
+        }
+    }
 }
 
 
