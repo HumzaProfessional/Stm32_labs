@@ -84,10 +84,10 @@ void init_LEDs_PC6to13(void)
  * update_LEDs_PC6to13()
  * Displays the ledPattern on PC6–PC13 if led_mode == PLAY_MODE.
  ==========================================================================================*/
-void update_LEDs_PC6to13(uint8_t ledPattern, uint8_t led_mode)
+void update_LEDs_PC5to12(uint8_t ledPattern, uint8_t led_mode)
 {
     GPIOC->ODR &= ~(0xFF << 5); // Clear PC6–PC13
-    if (led_mode == FLASH_LED_MODE) {
+    if (led_mode == PLAY_LED_MODE) {
         GPIOC->ODR |= ((ledPattern & 0xFF) << 5);
     }
 }
