@@ -45,46 +45,58 @@ static uint32_t msTimer = 0;
 //---------------------------------------------------------------------------------
 int main(void)
 {
+    init_Buttons();
+    init_LEDs_PC6to13();  // Consider renaming to reflect PC5–PC12
 
-init_Buttons();
-init_LEDs_PC5to12();  //
+    configureSysTick();
+    START_SYSTICK();
 
- configureSysTick();
-START_SYSTICK();
+    uint8_t prevUserBtn = 1;
+    uint8_t currUserBtn;
 
-uint8_t prevUserBtn = 1;
+    // Set user LED at startup based on current mode
+    if (led_mode == PLAY_MODE)
+        GPIOA->ODR |= (1 << 5);  // ON
+    else
+        GPIOA->ODR &= ~(1 << 5); // OFF
 
-while (1)
+    while (1)
     {
-        // Read debounced state from SysTick debounce filter
-        uint8_t currUserBtn = buttons[BTN_USER].state;
+        currUserBtn = buttons[BTN_USER].state;
 
-        // Rising edge detection (button released)
+        // Detect rising edge: button release
         if (prevUserBtn == 0 && currUserBtn == 1) {
-            led_mode = (led_mode == PLAY_MODE) ? FLASH_LED_MODE : PLAY_MODE;
+            if (led_mode == PLAY_MODE) {
+                led_mode = FLASH_LED_MODE;
+                GPIOA->ODR &= ~(1 << 5); // Turn OFF user LED
+            } else {
+                led_mode = PLAY_MODE;
+                GPIOA->ODR |= (1 << 5);  // Turn ON user LED
+            }
 
-            // Clear playfield
-            GPIOC->ODR &= ~(0xFF << 5);  // ✅ PC5–PC12
+            // Clear playfield (PC5–PC12)
+            GPIOC->ODR &= ~(0xFF << 5);
         }
 
         prevUserBtn = currUserBtn;
 
         if (led_mode == PLAY_MODE) {
-            playMode();  // game logic, LED shifting, scoring, etc.
+            playMode();
         } else if (led_mode == FLASH_LED_MODE) {
-            // Optional flashing pattern (e.g. alternate halves)
+            // Optional flashing pattern for testing
             static uint32_t blinkTimer = 0;
             if (++blinkTimer > 100000) {
-                ledPattern = (ledPattern == 0x0F) ? 0xF0 : 0x0F;
-                update_LEDs_PC6to13(ledPattern, led_mode);
+                if (ledPattern == 0x0F)
+                    ledPattern = 0xF0;
+                else
+                    ledPattern = 0x0F;
+
+                update_LEDs_PC6to13(ledPattern, led_mode);  // This lights PC5–PC12
                 blinkTimer = 0;
             }
         }
     }
 }
-
-
-
 
 /*==================================================================
  * configureSystick()
