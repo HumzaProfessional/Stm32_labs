@@ -112,22 +112,16 @@ void SysTick_Handler(void)
             buttons[i].filter |= 1U;
 
         switch (buttons[i].filter) {
-            case 0x00000000:
+            case 0x00:
                 buttons[i].state = 0;
                 break;
-            case 0xFFFFFFFF:
+            case 0xFF:
                 buttons[i].state = 1;
                 break;
             default:
                 break;
         }
     }
-    // TEST: Light up PA5 (user LED) when left button is pressed
-       if (buttons[BTN_LEFT].state == 0) {
-           GPIOA->ODR |= (1 << 5);
-       } else {
-           GPIOA->ODR &= ~(1 << 5);
-       }
 }
 
 void playMode(void)
@@ -183,7 +177,7 @@ void playMode(void)
                 gameState = STATE_SHIFT_RIGHT;
             } else {
                 player2Score++;
-                displayPlayerScore(player2Score, 1);
+                displayPlayerScore(player2Score, 2);
                 if (player2Score >= 3) {
                     winner = 2;
                     gameState = STATE_WIN;
@@ -223,6 +217,4 @@ void playMode(void)
             break;
     }
 }
-
-
 
