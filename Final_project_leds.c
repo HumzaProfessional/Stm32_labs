@@ -100,13 +100,14 @@ void update_LEDs_PC5to12(uint8_t ledPattern, uint8_t led_mode)
 void playMode(void)
 {
     switch (gameState) {
-        case STATE_SERVE:
-            serve();
-            ballServed = 0;
-            if (ballServed) {
-                gameState = (ledPattern == 0x01) ? STATE_SHIFT_RIGHT : STATE_SHIFT_LEFT;
-            }
-            break;
+   case STATE_SERVE:
+    serve();
+    if (ledPattern == 0x01)
+        gameState = STATE_SHIFT_RIGHT;
+    else
+        gameState = STATE_SHIFT_LEFT;
+    break;
+
 
         case STATE_SHIFT_RIGHT:
             if (moveRight() == 0) {
