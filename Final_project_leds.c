@@ -1,4 +1,4 @@
-#include "led_setup.h"
+##include "led_setup.h"
 #include "stm32l476xx.h"
 
 /************************************************************
@@ -15,7 +15,7 @@
 
 // --- Global game variables ---
 volatile uint8_t ledPattern = 0x01; // Start with PC8 lit
-volatile uint8_t led_mode = FLASH_LED_MODE;
+volatile uint8_t led_mode = PLAY_MODE;
 
 static uint8_t currentServer = 1;  // 1 = Player 1 (Blue), 0 = Player 2 (Red)
 volatile uint8_t player1Score = 0;
@@ -40,7 +40,8 @@ void serve(void);
 void playMode(void);
 void score(int whoScored);
 void displayPlayerScore(uint8_t score, uint8_t player);
-void update_LEDs_PC6to13(uint8_t ledPattern, uint8_t led_mode);
+void init_LEDs_PC5to12(void);
+void update_LEDs_PC5to12(uint8_t ledPattern, uint8_t led_mode);
 int moveRight(void);
 int moveLeft(void);
 
@@ -48,7 +49,7 @@ int moveLeft(void);
  * init_LEDs_PC6to13()
  * Configures PC6–PC13 as outputs, plus score LEDs for PA13–15 and PC2/3/15.
  =============================================================================*/
-void init_LEDs_PC6to13(void)
+void init_LEDs_PC5to12(void)
 {
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN;
 
@@ -87,7 +88,7 @@ void init_LEDs_PC6to13(void)
 void update_LEDs_PC5to12(uint8_t ledPattern, uint8_t led_mode)
 {
     GPIOC->ODR &= ~(0xFF << 5); // Clear PC6–PC13
-    if (led_mode == PLAY_LED_MODE) {
+    if (led_mode == PLAY_MODE) {
         GPIOC->ODR |= ((ledPattern & 0xFF) << 5);
     }
 }
@@ -166,7 +167,7 @@ int moveRight(void)
 {
     if (ledPattern == 0x80) return 0;
     ledPattern <<= 1;
-    update_LEDs_PC6to13(ledPattern, led_mode);
+    update_LEDs_PC5to12(ledPattern, led_mode);
     return 1;
 }
 
@@ -174,7 +175,7 @@ int moveLeft(void)
 {
     if (ledPattern == 0x01) return 0;
     ledPattern >>= 1;
-    update_LEDs_PC6to13(ledPattern, led_mode);
+    update_LEDs_PC5to12(ledPattern, led_mode);
     return 1;
 }
 
@@ -188,7 +189,7 @@ void serve(void)
         currentServer = 1;
     }
 
-    update_LEDs_PC6to13(ledPattern, led_mode);
+    update_LEDs_PC5to12(ledPattern, led_mode);
     ballServed = 1;
 }
 
@@ -229,4 +230,3 @@ void displayPlayerScore(uint8_t score, uint8_t player)
         if (score >= 3) GPIOC->ODR |= (1 << 3);
     }
 }
-
