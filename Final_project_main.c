@@ -45,37 +45,37 @@ static uint32_t msTimer = 0;
 //---------------------------------------------------------------------------------
 int main(void)
 {
-	START_SYSTICK();
+
     init_Buttons();
     init_LEDs_PC6to13();
 
+    configureSysTick();
+    START_SYSTICK();
+
     uint8_t prevUserBtn = 1;
 
-    while (1)
-    {
-        // Read current state of PA5
-        uint8_t currUserBtn = (GPIOA->IDR & (1 << 5)) ? 1 : 0;
+       while (1)
+       {
+           uint8_t currUserBtn = buttons[BTN_USER].state;
 
-        // Detect rising edge (0 → 1)
-        if (prevUserBtn == 0 && currUserBtn == 1) {
-            if (led_mode == PLAY_MODE)
-                led_mode = FLASH_LED_MODE;
-            else
-                led_mode = PLAY_MODE;
+           // Detect release (rising edge)
+           if (prevUserBtn == 0 && currUserBtn == 1) {
+               if (led_mode == PLAY_MODE)
+                   led_mode = FLASH_LED_MODE;
+               else
+                   led_mode = PLAY_MODE;
 
-            // Optional: clear field
-            GPIOC->ODR &= ~(0xFF << 6);
-        }
+               GPIOC->ODR &= ~(0xFF << 6);  // Clear LEDs
+           }
 
-        prevUserBtn = currUserBtn;
+           prevUserBtn = currUserBtn;
 
-        // Run game or other mode
-        if (led_mode == PLAY_MODE) {
-            playMode();
-        } else {
-            // Flashing mode logic here
-        }
-    }
+           if (led_mode == PLAY_MODE) {
+               playMode();
+           } else {
+               // FLASH_LED_MODE animation here
+           }
+       }
 }
 
 
@@ -134,7 +134,7 @@ void SysTick_Handler(void)
 	                if (buttons[i].state == 1) {
 	                    // Button transitioned: Released -> Pressed
 	                    // You can add edge-triggered behavior here if needed
-	                    updateBlinkRate();  // or trigger something else
+
 	                }
 	                buttons[i].state = 0; // Debounced: Pressed
 	                break;
@@ -149,8 +149,3 @@ void SysTick_Handler(void)
 	        }
 	    }
 }
-
-
-
-
-
