@@ -18,29 +18,33 @@
  * A form of debouncing is used to resolve noise between button presses.
  */
 
-#define SYS_CLK_FREQ 4000000 // determines the frequency of Systick
-#define SYSTICK_10HZ   ((SYS_CLK_FREQ / 20) - 1) // Initial frequency rate
 
-// Speed values (reload values for SysTick) for different speeds:
-#define SLOW   ((SYS_CLK_FREQ / 5) - 1)
-#define MEDIUM ((SYS_CLK_FREQ / 10) - 1)
-#define FAST   ((SYS_CLK_FREQ / 14) - 1)
+#define SYS_CLK_FREQ 4000000
+#define SYSTICK_10HZ   ((SYS_CLK_FREQ / 20) - 1)
+#define START_SYSTICK() (SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk)
 
+// Game state
+typedef enum {
+    STATE_SERVE,
+    STATE_SHIFT_LEFT,
+    STATE_SHIFT_RIGHT,
+    STATE_CHECK_LEFT_HIT,
+    STATE_CHECK_RIGHT_HIT,
+    STATE_WIN
+} GameState;
 
-
-// Start SysTick
-#define START_SYSTICK()     (SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk)
-
-
-// Function declaration
-void configureSysTick(void);
-void SysTick_Handler(void);
-
+static GameState gameState = STATE_SERVE;
+static uint8_t ballServed = 0;
+static uint8_t currentServer = 1;  // 1 = Player 1 (left), 0 = Player 2 (right)
+static uint8_t player1Score = 0;
+static uint8_t player2Score = 0;
+static uint8_t winner = 0;
 static uint32_t msTimer = 0;
 
-//--------------------------------------------------------------------------------
-// main()
-//---------------------------------------------------------------------------------
+void configureSysTick(void);
+void SysTick_Handler(void);
+void playMode(void);
+
 int main(void)
 {
     init_Buttons();
@@ -52,27 +56,23 @@ int main(void)
     uint8_t prevUserBtn = 1;
     uint8_t currUserBtn;
 
-    // Set user LED at startup based on current mode
     if (led_mode == PLAY_MODE)
-        GPIOA->ODR |= (1 << 5);  // ON
+        GPIOA->ODR |= (1 << 5);
     else
-        GPIOA->ODR &= ~(1 << 5); // OFF
+        GPIOA->ODR &= ~(1 << 5);
 
     while (1)
     {
         currUserBtn = buttons[BTN_USER].state;
 
-        // Detect rising edge: button release
         if (prevUserBtn == 0 && currUserBtn == 1) {
             if (led_mode == PLAY_MODE) {
                 led_mode = FLASH_LED_MODE;
-                GPIOA->ODR &= ~(1 << 5); // Turn OFF user LED
+                GPIOA->ODR &= ~(1 << 5);
             } else {
                 led_mode = PLAY_MODE;
-                GPIOA->ODR |= (1 << 5);  // Turn ON user LED
+                GPIOA->ODR |= (1 << 5);
             }
-
-            // Clear playfield (PC5–PC12)
             GPIOC->ODR &= ~(0xFF << 5);
         }
 
@@ -81,7 +81,6 @@ int main(void)
         if (led_mode == PLAY_MODE) {
             playMode();
         } else if (led_mode == FLASH_LED_MODE) {
-            // Optional flashing pattern for testing
             static uint32_t blinkTimer = 0;
             if (++blinkTimer > 100000) {
                 if (ledPattern == 0x0F)
@@ -89,80 +88,141 @@ int main(void)
                 else
                     ledPattern = 0x0F;
 
-                update_LEDs_PC5to12(ledPattern, led_mode);  // This lights PC5–PC12
+                update_LEDs_PC5to12(ledPattern, led_mode);
                 blinkTimer = 0;
             }
         }
     }
 }
 
-
-/*==================================================================
- * configureSystick()
- *
- * @param: none
- * @return: none
- *
- * Initializes the systick interrupt
- *==================================================================
- */
 void configureSysTick(void)
 {
-	SysTick->LOAD = SYSTICK_10HZ;  // Now expands to ((4000000 / 10) - 1)
-    SysTick->VAL  = 0;             // clear current count
-    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | // CPU clock
-                    SysTick_CTRL_TICKINT_Msk;    // enable interrupt, but not start
-
-
+    SysTick->LOAD = SYSTICK_10HZ;
+    SysTick->VAL = 0;
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
+                    SysTick_CTRL_TICKINT_Msk;
 }
 
-/*==================================================================
- * SysTick_Handler()
- *
- * @param: none
- * @return: none
- *
- * Enables the buttons to interrupt based on whether or not the two buttons are active low.
- * Changes depending on if led_mode is in SINGLE_LED_MODE or FLASH_LED.
- * In SINGLE_LED_MODE, the buttons trigger left or right direction changes of the lit led.
- * If it passed the farthest left or right led, the rate of led
- * Resets once it passed the FAST speed.
- *==================================================================
- */
 void SysTick_Handler(void)
 {
-	    msTimer++;
+    msTimer++;
+    for (int i = 0; i < NUM_BUTTONS; i++) {
+        buttons[i].filter <<= 1U;
+        if (buttons[i].port->IDR & (1U << buttons[i].pin))
+            buttons[i].filter |= 1U;
 
-	    for (int i = 0; i < NUM_BUTTONS; i++)
-	    {
-	        // Shift in the current raw input value into the filter
-	        buttons[i].filter <<= 1U;
-
-	        if (buttons[i].port->IDR & (1U << buttons[i].pin)) {
-	            buttons[i].filter |= 1U;
-	        }
-
-	        // Button is considered "pressed" if filter is all 0s
-	        // Button is considered "released" if filter is all 1s
-	        switch (buttons[i].filter)
-	        {
-	            case 0x00000000:
-	                if (buttons[i].state == 1) {
-	                    // Button transitioned: Released -> Pressed
-	                    // You can add edge-triggered behavior here if needed
-
-	                }
-	                buttons[i].state = 0; // Debounced: Pressed
-	                break;
-
-	            case 0xFFFFFFFF:
-	                buttons[i].state = 1; // Debounced: Released
-	                break;
-
-	            default:
-	                // Still bouncing — keep previous state
-	                break;
-	        }
-	    }
+        switch (buttons[i].filter) {
+            case 0x00000000:
+                buttons[i].state = 0;
+                break;
+            case 0xFFFFFFFF:
+                buttons[i].state = 1;
+                break;
+            default:
+                break;
+        }
+    }
+    // TEST: Light up PA5 (user LED) when left button is pressed
+       if (buttons[BTN_LEFT].state == 0) {
+           GPIOA->ODR |= (1 << 5);
+       } else {
+           GPIOA->ODR &= ~(1 << 5);
+       }
 }
+
+void playMode(void)
+{
+    switch (gameState)
+    {
+        case STATE_SERVE:
+            if (!ballServed) {
+                if (currentServer == 1)
+                    ledPattern = 0x01;
+                else
+                    ledPattern = 0x80;
+
+                update_LEDs_PC5to12(ledPattern, led_mode);
+                ballServed = 1;
+            }
+
+            if (currentServer == 1 && buttons[BTN_LEFT].state == 0)
+                gameState = STATE_SHIFT_RIGHT;
+            else if (currentServer == 0 && buttons[BTN_RIGHT].state == 0)
+                gameState = STATE_SHIFT_LEFT;
+            break;
+
+        case STATE_SHIFT_RIGHT:
+            if (moveRight() == 0)
+                gameState = STATE_CHECK_RIGHT_HIT;
+            break;
+
+        case STATE_SHIFT_LEFT:
+            if (moveLeft() == 0)
+                gameState = STATE_CHECK_LEFT_HIT;
+            break;
+
+        case STATE_CHECK_RIGHT_HIT:
+            if (buttons[BTN_RIGHT].state == 0) {
+                gameState = STATE_SHIFT_LEFT;
+            } else {
+                player1Score++;
+                displayPlayerScore(player1Score, 1);
+                if (player1Score >= 3) {
+                    winner = 1;
+                    gameState = STATE_WIN;
+                } else {
+                    ballServed = 0;
+                    currentServer = 0;
+                    gameState = STATE_SERVE;
+                }
+            }
+            break;
+
+        case STATE_CHECK_LEFT_HIT:
+            if (buttons[BTN_LEFT].state == 0) {
+                gameState = STATE_SHIFT_RIGHT;
+            } else {
+                player2Score++;
+                displayPlayerScore(player2Score, 1);
+                if (player2Score >= 3) {
+                    winner = 2;
+                    gameState = STATE_WIN;
+                } else {
+                    ballServed = 0;
+                    currentServer = 1;
+                    gameState = STATE_SERVE;
+                }
+            }
+            break;
+
+        case STATE_WIN:
+            for (int i = 0; i < 3; i++) {
+                if (winner == 1)
+                    GPIOA->ODR |= (1 << 13) | (1 << 14) | (1 << 15);
+                else
+                    GPIOC->ODR |= (1 << 2) | (1 << 3) | (1 << 15);
+
+                for (volatile int d = 0; d < 500000; d++);
+
+                if (winner == 1)
+                    GPIOA->ODR &= ~((1 << 13) | (1 << 14) | (1 << 15));
+                else
+                    GPIOC->ODR &= ~((1 << 2) | (1 << 3) | (1 << 15));
+
+                for (volatile int d = 0; d < 500000; d++);
+            }
+
+            player1Score = 0;
+            player2Score = 0;
+            winner = 0;
+            ballServed = 0;
+            currentServer = 1;
+            displayPlayerScore(0, 1);
+            displayPlayerScore(0, 2);
+            gameState = STATE_SERVE;
+            break;
+    }
+}
+
+
 
