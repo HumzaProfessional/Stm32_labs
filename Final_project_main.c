@@ -20,8 +20,10 @@
 
 
 #define SYS_CLK_FREQ 4000000
-#define SYSTICK_2HZ   ((SYS_CLK_FREQ / 5) - 1)
-#define START_SYSTICK() (SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk)
+#define MAX_SPEED_TICKS  200000   // Fastest speed
+#define SPEED_STEP        300000   // How much to subtract per hit
+//#define SYSTICK_2HZ   ((SYS_CLK_FREQ / 5) - 1)
+//#define START_SYSTICK() (SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk)
 
 // Game state
 typedef enum {
@@ -40,10 +42,10 @@ typedef enum {
 static PongState gameState = STATE_SERVE;
 
 
-static uint32_t msTimer = 0;
-volatile uint8_t tickFlag = 0;
-uint8_t player1Score = 0;
-uint8_t player2Score = 0;
+static uint8_t player1Score = 0;
+static uint8_t player2Score = 0;
+uint32_t currentSpeed = 2000000;  // Start slow
+static int hitWaitTicks = 0;
 
 
 
@@ -56,26 +58,20 @@ int main(void)
     init_Buttons();
     init_LEDs_PC5to12();
 
-    configureSysTick();
-    START_SYSTICK();
+    configureSysTick(currentSpeed);
+    serve();
 
-
-    serve();  // Start the game
-
-        while (1)
-	{
-           
-
-
-        }
+    while (1);
 }
 
-void configureSysTick(void)
+
+void configureSysTick(uint32_t reloadValue)
 {
-    SysTick->LOAD = SYSTICK_2HZ;
-    SysTick->VAL = 0;
+    SysTick->LOAD = reloadValue - 1;
+    SysTick->VAL  = 0;
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
-                    SysTick_CTRL_TICKINT_Msk;
+                    SysTick_CTRL_TICKINT_Msk |
+                    SysTick_CTRL_ENABLE_Msk;
 }
 
 void SysTick_Handler(void)
@@ -97,83 +93,92 @@ void SysTick_Handler(void)
                 break;
         }
     }
-  static int hitWaitTicks = 0;
 
-switch (gameState)
-{
-    case STATE_SERVE:
-        serve();
-        if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||  // Player 1 = PC1
-            (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {  // Player 2 = PC0
-            if (ledPattern == 0x01)
-                gameState = STATE_SHIFT_LEFT;
-            else if (ledPattern == 0x80)
-                gameState = STATE_SHIFT_RIGHT;
-        }
-        break;
 
-    case STATE_SHIFT_LEFT:
-        if (!shiftLeft()) {
-            if (ledPattern == 0x80) {
-                gameState = STATE_RIGHT_HITZONE;
+ switch (gameState)
+    {
+        case STATE_SERVE:
+            serve();
+            if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||
+                (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {
+                if (ledPattern == 0x01)
+                    gameState = STATE_SHIFT_LEFT;
+                else if (ledPattern == 0x80)
+                    gameState = STATE_SHIFT_RIGHT;
+            }
+            break;
+
+        case STATE_SHIFT_LEFT:
+            if (!shiftLeft()) {
+                if (ledPattern == 0x80) {
+                    gameState = STATE_RIGHT_HITZONE;
+                    hitWaitTicks = 0;
+                }
+            }
+            break;
+
+        case STATE_SHIFT_RIGHT:
+            if (!shiftRight()) {
+                if (ledPattern == 0x01) {
+                    gameState = STATE_LEFT_HITZONE;
+                    hitWaitTicks = 0;
+                }
+            }
+            break;
+
+        case STATE_RIGHT_HITZONE:
+            hitWaitTicks++;
+            if ((GPIOC->IDR & (1 << 0)) == 0) {
+                gameState = STATE_RIGHT_HIT;
+                hitWaitTicks = 0;
+            } else if (hitWaitTicks > 3) {
+                gameState = STATE_RIGHT_MISS;
                 hitWaitTicks = 0;
             }
-        }
-        break;
+            break;
 
-    case STATE_SHIFT_RIGHT:
-        if (!shiftRight()) {
-            if (ledPattern == 0x01) {
-                gameState = STATE_LEFT_HITZONE;
+        case STATE_LEFT_HITZONE:
+            hitWaitTicks++;
+            if ((GPIOC->IDR & (1 << 1)) == 0) {
+                gameState = STATE_LEFT_HIT;
+                hitWaitTicks = 0;
+            } else if (hitWaitTicks > 3) {
+                gameState = STATE_LEFT_MISS;
                 hitWaitTicks = 0;
             }
-        }
-        break;
+            break;
 
-    case STATE_RIGHT_HITZONE:
-        hitWaitTicks++;
-        if ((GPIOC->IDR & (1 << 0)) == 0) {  // Player 2 hit (PC0)
-            gameState = STATE_RIGHT_HIT;
-            hitWaitTicks = 0;
-        } else if (hitWaitTicks > 3) {
-            gameState = STATE_RIGHT_MISS;
-            hitWaitTicks = 0;
-        }
-        break;
+        case STATE_RIGHT_HIT:
+            if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
+                currentSpeed -= SPEED_STEP;
+            configureSysTick(currentSpeed);
+            gameState = STATE_SHIFT_RIGHT;
+            break;
 
-    case STATE_LEFT_HITZONE:
-        hitWaitTicks++;
-        if ((GPIOC->IDR & (1 << 1)) == 0) {  // Player 1 hit (PC1)
-            gameState = STATE_LEFT_HIT;
-            hitWaitTicks = 0;
-        } else if (hitWaitTicks > 3) {
-            gameState = STATE_LEFT_MISS;
-            hitWaitTicks = 0;
-        }
-        break;
+        case STATE_LEFT_HIT:
+            if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
+                currentSpeed -= SPEED_STEP;
+            configureSysTick(currentSpeed);
+            gameState = STATE_SHIFT_LEFT;
+            break;
 
-    case STATE_RIGHT_HIT:
-        gameState = STATE_SHIFT_RIGHT;  // Ball returns toward P1
-        break;
+        case STATE_RIGHT_MISS:
+            player1Score++;
+            currentSpeed = 2000000;
+            configureSysTick(currentSpeed);
+            currentServer = 0;
+            serve();
+            gameState = STATE_SERVE;
+            break;
 
-    case STATE_LEFT_HIT:
-        gameState = STATE_SHIFT_LEFT;  // Ball returns toward P2
-        break;
-
-    case STATE_RIGHT_MISS:
-        player1Score++;
-        currentServer = 0;  // P1 now serves
-        serve();
-        gameState = STATE_SERVE;
-        break;
-
-    case STATE_LEFT_MISS:
-        player2Score++;
-        currentServer = 1;  // P2 now serves
-        serve();
-        gameState = STATE_SERVE;
-        break;
-}
-
+        case STATE_LEFT_MISS:
+            player2Score++;
+            currentSpeed = 2000000;
+            configureSysTick(currentSpeed);
+            currentServer = 1;
+            serve();
+            gameState = STATE_SERVE;
+            break;
+    }
 
 }
