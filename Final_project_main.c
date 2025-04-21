@@ -97,12 +97,14 @@ void SysTick_Handler(void)
                 break;
         }
     }
-   switch (gameState)
+  static int hitWaitTicks = 0;
+
+switch (gameState)
 {
     case STATE_SERVE:
         serve();
-        if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||  // Player 1 (PC1)
-            (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {  // Player 2 (PC0)
+        if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||  // Player 1 = PC1
+            (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {  // Player 2 = PC0
             if (ledPattern == 0x01)
                 gameState = STATE_SHIFT_LEFT;
             else if (ledPattern == 0x80)
@@ -112,55 +114,66 @@ void SysTick_Handler(void)
 
     case STATE_SHIFT_LEFT:
         if (!shiftLeft()) {
-            if (ledPattern == 0x80)  // reached PC12
+            if (ledPattern == 0x80) {
                 gameState = STATE_RIGHT_HITZONE;
+                hitWaitTicks = 0;
+            }
         }
         break;
 
     case STATE_SHIFT_RIGHT:
         if (!shiftRight()) {
-            if (ledPattern == 0x01)  // reached PC5
+            if (ledPattern == 0x01) {
                 gameState = STATE_LEFT_HITZONE;
+                hitWaitTicks = 0;
+            }
         }
         break;
 
     case STATE_RIGHT_HITZONE:
-        if ((GPIOC->IDR & (1 << 0)) == 0) {  // PC0 = Player 2 hit
+        hitWaitTicks++;
+        if ((GPIOC->IDR & (1 << 0)) == 0) {  // Player 2 hit (PC0)
             gameState = STATE_RIGHT_HIT;
-        } else {
+            hitWaitTicks = 0;
+        } else if (hitWaitTicks > 3) {
             gameState = STATE_RIGHT_MISS;
+            hitWaitTicks = 0;
         }
         break;
 
     case STATE_LEFT_HITZONE:
-        if ((GPIOC->IDR & (1 << 1)) == 0) {  // PC1 = Player 1 hit
+        hitWaitTicks++;
+        if ((GPIOC->IDR & (1 << 1)) == 0) {  // Player 1 hit (PC1)
             gameState = STATE_LEFT_HIT;
-        } else {
+            hitWaitTicks = 0;
+        } else if (hitWaitTicks > 3) {
             gameState = STATE_LEFT_MISS;
+            hitWaitTicks = 0;
         }
         break;
 
     case STATE_RIGHT_HIT:
-        gameState = STATE_SHIFT_RIGHT;  // Ball moves back toward Player 1
+        gameState = STATE_SHIFT_RIGHT;  // Ball returns toward P1
         break;
 
     case STATE_LEFT_HIT:
-        gameState = STATE_SHIFT_LEFT;  // Ball moves back toward Player 2
+        gameState = STATE_SHIFT_LEFT;  // Ball returns toward P2
         break;
 
     case STATE_RIGHT_MISS:
         player1Score++;
-        currentServer = 0;
+        currentServer = 0;  // P1 now serves
         serve();
         gameState = STATE_SERVE;
         break;
 
     case STATE_LEFT_MISS:
         player2Score++;
-        currentServer = 1;
+        currentServer = 1;  // P2 now serves
         serve();
         gameState = STATE_SERVE;
         break;
 }
+
 
 }
