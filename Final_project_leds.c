@@ -37,18 +37,44 @@ void init_LEDs_PC5to12(void)
         GPIOC->PUPDR   &= ~(3UL << (pin * 2));
     }
 
-    // Score LEDs for player 2 (PC2, PC3, PC15)
-    GPIOC->MODER &= ~(GPIO_MODER_MODE15 | GPIO_MODER_MODE2 | GPIO_MODER_MODE3);
-    GPIOC->MODER |=  (GPIO_MODER_MODE15_0 | GPIO_MODER_MODE2_0 | GPIO_MODER_MODE3_0);
-    GPIOC->OTYPER &= ~(GPIO_OTYPER_OT15 | GPIO_OTYPER_OT2 | GPIO_OTYPER_OT3);
-    GPIOC->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED15 | GPIO_OSPEEDR_OSPEED2 | GPIO_OSPEEDR_OSPEED3);
-    GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPD15 | GPIO_PUPDR_PUPD2 | GPIO_PUPDR_PUPD3);
+    // --- Player 1 Score: PC14, PC15, PH0 ---
+    GPIOC->MODER &= ~(3UL << (14 * 2));
+    GPIOC->MODER |=  (1UL << (14 * 2));
+    GPIOC->OTYPER  &= ~(1UL << 14);
+    GPIOC->OSPEEDR &= ~(3UL << (14 * 2));
+    GPIOC->PUPDR   &= ~(3UL << (14 * 2));
 
-    // User LED (PA5)
-    GPIOA->MODER   = (GPIOA->MODER & ~GPIO_MODER_MODE5) | GPIO_MODER_MODE5_0;
-    GPIOA->OTYPER  &= ~(GPIO_OTYPER_OT5);
-    GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED5);
-    GPIOA->PUPDR   &= ~(GPIO_PUPDR_PUPD5);
+    GPIOC->MODER &= ~(3UL << (15 * 2));
+    GPIOC->MODER |=  (1UL << (15 * 2));
+    GPIOC->OTYPER  &= ~(1UL << 15);
+    GPIOC->OSPEEDR &= ~(3UL << (15 * 2));
+    GPIOC->PUPDR   &= ~(3UL << (15 * 2));
+
+    GPIOH->MODER &= ~(3UL << (0 * 2));
+    GPIOH->MODER |=  (1UL << (0 * 2));
+    GPIOH->OTYPER  &= ~(1UL << 0);
+    GPIOH->OSPEEDR &= ~(3UL << (0 * 2));
+    GPIOH->PUPDR   &= ~(3UL << (0 * 2));
+
+    // --- Player 2 Score: PH1, PC2, PC3 ---
+    GPIOH->MODER &= ~(3UL << (1 * 2));
+    GPIOH->MODER |=  (1UL << (1 * 2));
+    GPIOH->OTYPER  &= ~(1UL << 1);
+    GPIOH->OSPEEDR &= ~(3UL << (1 * 2));
+    GPIOH->PUPDR   &= ~(3UL << (1 * 2));
+
+    GPIOC->MODER &= ~(3UL << (2 * 2));
+    GPIOC->MODER |=  (1UL << (2 * 2));
+    GPIOC->OTYPER  &= ~(1UL << 2);
+    GPIOC->OSPEEDR &= ~(3UL << (2 * 2));
+    GPIOC->PUPDR   &= ~(3UL << (2 * 2));
+
+    GPIOC->MODER &= ~(3UL << (3 * 2));
+    GPIOC->MODER |=  (1UL << (3 * 2));
+    GPIOC->OTYPER  &= ~(1UL << 3);
+    GPIOC->OSPEEDR &= ~(3UL << (3 * 2));
+    GPIOC->PUPDR   &= ~(3UL << (3 * 2));
+}
 
     void update_LEDs_PC5to12();
 
