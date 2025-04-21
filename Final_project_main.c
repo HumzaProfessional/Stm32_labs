@@ -19,7 +19,8 @@
 
 #define SYS_CLK_FREQ 4000000
 #define MAX_SPEED_TICKS  200000   // Fastest speed
-#define SPEED_STEP        300000   // How much to subtract per hit
+#define SPEED_STEP        150000   // How much to subtract per hit
+
 
 // Game state
 typedef enum {
@@ -37,7 +38,7 @@ typedef enum {
 static PongState gameState = STATE_SERVE;
 static uint8_t player1Score = 0;
 static uint8_t player2Score = 0;
-uint32_t currentSpeed = 2000000;  // Start slow
+uint32_t currentSpeed = 8000000;  // Start slow
 static int hitWaitTicks = 0;
 static uint32_t msTimer = 0;
 
@@ -84,12 +85,12 @@ void SysTick_Handler(void)
         }
     }
 
-    switch (gameState)
+  switch (gameState)
     {
         case STATE_SERVE:
             serve();
-            if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||
-                (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {
+            if ((currentServer == 1 && buttons[BTN_LEFT].state == 0) ||
+                (currentServer == 0 && buttons[BTN_RIGHT].state == 0)) {
                 if (ledPattern == 0x01)
                     gameState = STATE_SHIFT_LEFT;
                 else if (ledPattern == 0x80)
@@ -117,7 +118,7 @@ void SysTick_Handler(void)
 
         case STATE_RIGHT_HITZONE:
             hitWaitTicks++;
-            if ((GPIOC->IDR & (1 << 0)) == 0) {
+            if (buttons[BTN_RIGHT].state == 0) {
                 gameState = STATE_RIGHT_HIT;
                 hitWaitTicks = 0;
             } else if (hitWaitTicks > 3) {
@@ -128,7 +129,7 @@ void SysTick_Handler(void)
 
         case STATE_LEFT_HITZONE:
             hitWaitTicks++;
-            if ((GPIOC->IDR & (1 << 1)) == 0) {
+            if (buttons[BTN_LEFT].state == 0) {
                 gameState = STATE_LEFT_HIT;
                 hitWaitTicks = 0;
             } else if (hitWaitTicks > 3) {
@@ -153,7 +154,7 @@ void SysTick_Handler(void)
 
         case STATE_RIGHT_MISS:
             player1Score++;
-            currentSpeed = 2000000;
+            currentSpeed = 800000;
             configureSysTick(currentSpeed);
             currentServer = 0;
             serve();
@@ -162,7 +163,7 @@ void SysTick_Handler(void)
 
         case STATE_LEFT_MISS:
             player2Score++;
-            currentSpeed = 2000000;
+            currentSpeed = 800000;
             configureSysTick(currentSpeed);
             currentServer = 1;
             serve();
