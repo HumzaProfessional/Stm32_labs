@@ -1,96 +1,91 @@
 
-#include "stm32l476xx.h"
-#include "led_setup.h"
-#include "buttons.h"
+/************************************************************
+ * @file: led_setup.c
+ *
+ * This file sets up the LEDs and buttons.
+ * It determines which LED is on, depending on the state of led_mode.
+ * It clears all bits from PC6–PC13 and uses a global ledPattern variable
+ * to determine what LED to light.
+ ************************************************************/
 
-/**
- ******************************************
- * @file main.c
- * @brief main program
- * @author Humza Rana & Mac
- * @Lab 4:
- * @Class: CPE 3000
- * -----------------------------------------------------
- *  In this lab, pins are enabled to light leds in two modes: SINGLE_LED_MODE and FLASH_LEDMODE
- *  Two buttons are enabled to trigger a Systick interrupt and EXTI interupts for both buttons.
- *  A integer called pattern is used to determine what leds are lit depeding on the mode.
- *  Systick, defined speeds, and an array are used to determine the speed of frequency of events.
- * A form of debouncing is used to resolve noise between button presses.
- */
+#define PLAY_MODE 0
+#define FLASH_LED_MODE 1
+volatile uint8_t currentServer = 1;  // 1 = Player 1, 0 = Player 2
 
 
-#define SYS_CLK_FREQ 4000000
-#define SYSTICK_10HZ   ((SYS_CLK_FREQ / 20) - 1)
-#define START_SYSTICK() (SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk)
+// --- Global LED state ---
+volatile uint8_t ledPattern = 0x01;
+volatile uint8_t led_mode = PLAY_MODE;
 
-// Game state
-typedef enum {
-    STATE_SERVE,
-    STATE_SHIFT_LEFT,
-    STATE_SHIFT_RIGHT,
-    STATE_CHECK_LEFT_HIT,
-    STATE_CHECK_RIGHT_HIT,
-    STATE_WIN
-} GameState;
-
-static GameState gameState = STATE_SERVE;
+void update_LEDs_PC5to12();
 
 
-static uint32_t msTimer = 0;
-
-void configureSysTick(void);
-void SysTick_Handler(void);
-
-
-int main(void)
+/*=============================================================================
+ * init_LEDs_PC5to12()
+ =============================================================================*/
+void init_LEDs_PC5to12(void)
 {
-    init_Buttons();
-    init_LEDs_PC5to12();
+    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN;
 
-    configureSysTick();
-    START_SYSTICK();
-
-
-  while(1){
-    	 // Shift left to PC12
-    	        while (shiftLeft()) {
-
-    	        }
-
-    	        // Shift right back to PC5
-    	        while (shiftRight()) {
-
-    	        }
-  }
-}
-
-void configureSysTick(void)
-{
-    SysTick->LOAD = SYSTICK_10HZ;
-    SysTick->VAL = 0;
-    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
-                    SysTick_CTRL_TICKINT_Msk;
-}
-
-void SysTick_Handler(void)
-{
-
-
-    msTimer++;
-    for (int i = 0; i < NUM_BUTTONS; i++) {
-        buttons[i].filter <<= 1U;
-        if (buttons[i].port->IDR & (1U << buttons[i].pin))
-            buttons[i].filter |= 1U;
-
-        switch (buttons[i].filter) {
-            case 0x00:
-                buttons[i].state = 0;
-                break;
-            case 0xFF:
-                buttons[i].state = 1;
-                break;
-            default:
-                break;
-        }
+    for (int pin = 5; pin <= 12; pin++) {
+        GPIOC->MODER   &= ~(3UL << (pin * 2));
+        GPIOC->MODER   |=  (1UL << (pin * 2));
+        GPIOC->OTYPER  &= ~(1UL << pin);
+        GPIOC->OSPEEDR &= ~(3UL << (pin * 2));
+        GPIOC->PUPDR   &= ~(3UL << (pin * 2));
     }
+
+    // Score LEDs for player 2 (PC2, PC3, PC15)
+    GPIOC->MODER &= ~(GPIO_MODER_MODE15 | GPIO_MODER_MODE2 | GPIO_MODER_MODE3);
+    GPIOC->MODER |=  (GPIO_MODER_MODE15_0 | GPIO_MODER_MODE2_0 | GPIO_MODER_MODE3_0);
+    GPIOC->OTYPER &= ~(GPIO_OTYPER_OT15 | GPIO_OTYPER_OT2 | GPIO_OTYPER_OT3);
+    GPIOC->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED15 | GPIO_OSPEEDR_OSPEED2 | GPIO_OSPEEDR_OSPEED3);
+    GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPD15 | GPIO_PUPDR_PUPD2 | GPIO_PUPDR_PUPD3);
+
+    // User LED (PA5)
+    GPIOA->MODER   = (GPIOA->MODER & ~GPIO_MODER_MODE5) | GPIO_MODER_MODE5_0;
+    GPIOA->OTYPER  &= ~(GPIO_OTYPER_OT5);
+    GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED5);
+    GPIOA->PUPDR   &= ~(GPIO_PUPDR_PUPD5);
+
+    void update_LEDs_PC5to12();
+
 }
+
+/*=============================================================================
+ * update_LEDs_PC5to12()
+ =============================================================================*/
+void update_LEDs_PC5to12(void)
+{
+    GPIOC->ODR &= ~(0xFF << 5);
+    GPIOC->ODR |= ((ledPattern & 0xFF) << 5);
+}
+
+int shiftRight(void)
+{
+    if (ledPattern == 0x01) return 0;
+    ledPattern >>= 1;
+    update_LEDs_PC5to12();
+    return 1;
+}
+
+int shiftLeft(void)
+{
+    if (ledPattern == 0x80) return 0;
+    ledPattern <<= 1;
+    update_LEDs_PC5to12();
+    return 1;
+}
+
+void serve(void)
+{
+    if (currentServer == 1) {
+        ledPattern = 0x01;  // Start at PC5
+        currentServer = 0;  // Next serve by Player 2
+    } else {
+        ledPattern = 0x80;  // Start at PC12
+        currentServer = 1;  // Next serve by Player 1
+    }
+    update_LEDs_PC5to12();
+}
+
