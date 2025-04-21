@@ -3,32 +3,33 @@
 
 /************************************************************
  * @file: led_setup.c
+ * @brief: LED and score setup functions for 1D Pong
  *
- * This file sets up the LEDs and buttons.
- * It determines which LED is on, depending on the state of led_mode.
- * It clears all bits from PC6–PC13 and uses a global ledPattern variable
- * to determine what LED to light.
+ * This file contains functions to initialize and control LEDs
+ * used for the playfield and scoring in a 1D Pong game.
+ * It configures PC5–PC12 for the playfield, and uses PC14, PC15,
+ * PH0 (Player 1 score) and PH1, PC2, PC3 (Player 2 score).
+ * Functions also include LED shifting logic and serving logic.
  ************************************************************/
 
 #define PLAY_MODE 0
 #define FLASH_LED_MODE 1
-volatile uint8_t currentServer = 1;  // 1 = Player 1, 0 = Player 2
 
-
-// --- Global LED state ---
 volatile uint8_t ledPattern = 0x01;
 volatile uint8_t led_mode = PLAY_MODE;
-
-void update_LEDs_PC5to12();
-
+volatile uint8_t currentServer = 1;  // 1 = Player 1, 0 = Player 2
 
 /*=============================================================================
  * init_LEDs_PC5to12()
+ * Configures the GPIO pins for the 8 playfield LEDs (PC5–PC12)
+ * and the score LEDs for both players.
  =============================================================================*/
 void init_LEDs_PC5to12(void)
 {
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN;
+    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOHEN;
 
+    // --- Playfield LEDs: PC5–PC12 ---
     for (int pin = 5; pin <= 12; pin++) {
         GPIOC->MODER   &= ~(3UL << (pin * 2));
         GPIOC->MODER   |=  (1UL << (pin * 2));
@@ -76,19 +77,20 @@ void init_LEDs_PC5to12(void)
     GPIOC->PUPDR   &= ~(3UL << (3 * 2));
 }
 
-    void update_LEDs_PC5to12();
-
-}
-
 /*=============================================================================
  * update_LEDs_PC5to12()
+ * Updates the playfield LEDs using the current ledPattern.
  =============================================================================*/
 void update_LEDs_PC5to12(void)
 {
-    GPIOC->ODR &= ~(0xFF << 5);
-    GPIOC->ODR |= ((ledPattern & 0xFF) << 5);
+    GPIOC->ODR &= ~(0xFF << 5);  // Clear PC5–PC12
+    GPIOC->ODR |= ((ledPattern & 0xFF) << 5);  // Set new pattern
 }
 
+/*=============================================================================
+ * shiftRight()
+ * Shifts the ball one LED to the right. Returns 0 if at end.
+ =============================================================================*/
 int shiftRight(void)
 {
     if (ledPattern == 0x01) return 0;
@@ -97,6 +99,10 @@ int shiftRight(void)
     return 1;
 }
 
+/*=============================================================================
+ * shiftLeft()
+ * Shifts the ball one LED to the left. Returns 0 if at end.
+ =============================================================================*/
 int shiftLeft(void)
 {
     if (ledPattern == 0x80) return 0;
@@ -105,20 +111,28 @@ int shiftLeft(void)
     return 1;
 }
 
+/*=============================================================================
+ * serve()
+ * Places the LED ball at the starting position based on the server.
+ =============================================================================*/
 void serve(void)
 {
     if (currentServer == 1) {
-        ledPattern = 0x01;  // Start at PC5 (Player 1 serve)
+        ledPattern = 0x01;  // Player 1 serve from left
     } else {
-        ledPattern = 0x80;  // Start at PC12 (Player 2 serve)
+        ledPattern = 0x80;  // Player 2 serve from right
     }
     update_LEDs_PC5to12();
-} // Note: currentServer toggle should be handled in main after serve() if needed
+}
 
+/*=============================================================================
+ * updatePlayerScore()
+ * Lights up LEDs for the score of the specified player (1 or 2).
+ =============================================================================*/
 void updatePlayerScore(uint8_t score, uint8_t player)
 {
     if (player == 1) {
-        // Player 1 Score LEDs: PC14, PC15, PH0
+        // Player 1: PC14, PC15, PH0
         GPIOC->ODR &= ~((1 << 14) | (1 << 15));
         GPIOH->ODR &= ~(1 << 0);
 
@@ -127,7 +141,7 @@ void updatePlayerScore(uint8_t score, uint8_t player)
         if (score >= 3) GPIOH->ODR |= (1 << 0);
     }
     else if (player == 2) {
-        // Player 2 Score LEDs: PH1, PC2, PC3
+        // Player 2: PH1, PC2, PC3
         GPIOH->ODR &= ~(1 << 1);
         GPIOC->ODR &= ~((1 << 2) | (1 << 3));
 
@@ -136,5 +150,3 @@ void updatePlayerScore(uint8_t score, uint8_t player)
         if (score >= 3) GPIOC->ODR |= (1 << 3);
     }
 }
-
-
