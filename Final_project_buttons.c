@@ -26,7 +26,8 @@ volatile uint8_t currentServer = 1;  // 1 = Player 1, 0 = Player 2
  =============================================================================*/
 void init_LEDs_PC5to12(void)
 {
-    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN | RCC_AHB2ENR_GPIOHEN;
+    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN;
+    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOHEN;
 
     // --- Playfield LEDs: PC5–PC12 ---
     for (int pin = 5; pin <= 12; pin++) {
