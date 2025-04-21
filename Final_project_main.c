@@ -97,67 +97,70 @@ void SysTick_Handler(void)
                 break;
         }
     }
-    switch (gameState)
-    {
-        case STATE_SERVE:
-            serve();
-            if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||
-                (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {
-                if (ledPattern == 0x01)
-                    gameState = STATE_SHIFT_LEFT;
-                else if (ledPattern == 0x80)
-                    gameState = STATE_SHIFT_RIGHT;
-            }
-            break;
+   switch (gameState)
+{
+    case STATE_SERVE:
+        serve();
+        if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||  // Player 1 (PC1)
+            (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {  // Player 2 (PC0)
+            if (ledPattern == 0x01)
+                gameState = STATE_SHIFT_LEFT;
+            else if (ledPattern == 0x80)
+                gameState = STATE_SHIFT_RIGHT;
+        }
+        break;
 
-        case STATE_SHIFT_LEFT:
-            if (!shiftLeft()) {
+    case STATE_SHIFT_LEFT:
+        if (!shiftLeft()) {
+            if (ledPattern == 0x80)  // reached PC12
                 gameState = STATE_RIGHT_HITZONE;
-            }
-            break;
+        }
+        break;
 
-        case STATE_SHIFT_RIGHT:
-            if (!shiftRight()) {
+    case STATE_SHIFT_RIGHT:
+        if (!shiftRight()) {
+            if (ledPattern == 0x01)  // reached PC5
                 gameState = STATE_LEFT_HITZONE;
-            }
-            break;
+        }
+        break;
 
-        case STATE_RIGHT_HITZONE:
-            if ((GPIOC->IDR & (1 << 0)) == 0) {
-                gameState = STATE_RIGHT_HIT;
-            } else {
-                gameState = STATE_RIGHT_MISS;
-            }
-            break;
+    case STATE_RIGHT_HITZONE:
+        if ((GPIOC->IDR & (1 << 0)) == 0) {  // PC0 = Player 2 hit
+            gameState = STATE_RIGHT_HIT;
+        } else {
+            gameState = STATE_RIGHT_MISS;
+        }
+        break;
 
-        case STATE_LEFT_HITZONE:
-            if ((GPIOC->IDR & (1 << 1)) == 0) {
-                gameState = STATE_LEFT_HIT;
-            } else {
-                gameState = STATE_LEFT_MISS;
-            }
-            break;
+    case STATE_LEFT_HITZONE:
+        if ((GPIOC->IDR & (1 << 1)) == 0) {  // PC1 = Player 1 hit
+            gameState = STATE_LEFT_HIT;
+        } else {
+            gameState = STATE_LEFT_MISS;
+        }
+        break;
 
-        case STATE_RIGHT_HIT:
-            gameState = STATE_SHIFT_RIGHT;
-            break;
+    case STATE_RIGHT_HIT:
+        gameState = STATE_SHIFT_RIGHT;  // Ball moves back toward Player 1
+        break;
 
-        case STATE_LEFT_HIT:
-            gameState = STATE_SHIFT_LEFT;
-            break;
+    case STATE_LEFT_HIT:
+        gameState = STATE_SHIFT_LEFT;  // Ball moves back toward Player 2
+        break;
 
-        case STATE_RIGHT_MISS:
-            player1Score++;
-            currentServer = 0;
-            serve();
-            gameState = STATE_SERVE;
-            break;
+    case STATE_RIGHT_MISS:
+        player1Score++;
+        currentServer = 0;
+        serve();
+        gameState = STATE_SERVE;
+        break;
 
-        case STATE_LEFT_MISS:
-            player2Score++;
-            currentServer = 1;
-            serve();
-            gameState = STATE_SERVE;
-            break;
-    }
+    case STATE_LEFT_MISS:
+        player2Score++;
+        currentServer = 1;
+        serve();
+        gameState = STATE_SERVE;
+        break;
+}
+
 }
