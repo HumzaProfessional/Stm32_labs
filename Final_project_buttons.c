@@ -1,152 +1,62 @@
 #include "led_setup.h"
 #include "stm32l476xx.h"
 
-/************************************************************
- * @file: led_setup.c
- * @brief: LED and score setup functions for 1D Pong
+/*=========================================================================================
+ *  init_Buttons()
+ *  @parameter: none
+ *  @ return: none
  *
- * This file contains functions to initialize and control LEDs
- * used for the playfield and scoring in a 1D Pong game.
- * It configures PC5–PC12 for the playfield, and uses PC14, PC15,
- * PH0 (Player 1 score) and PH1, PC2, PC3 (Player 2 score).
- * Functions also include LED shifting logic and serving logic.
- ************************************************************/
+ * Initialize pc0 and pc1 as input for the buttons.
+ ===========================================================================================
+ */
 
-#define PLAY_MODE 0
-#define FLASH_LED_MODE 1
+//-------------------------------------------------------------------------------------
+// Structure that encapsulates a debounced button
+//-------------------------------------------------------------------------------------
+typedef struct {
+    uint32_t filter;         // 8-bit shift register for debouncing
+    uint32_t state;          // 0 = pressed, 1 = released
+    GPIO_TypeDef *port;      // Pointer to GPIO port
+    uint32_t pin;            // Pin number (0–15)
+} Button;
 
-volatile uint8_t ledPattern = 0x01;
-volatile uint8_t led_mode = PLAY_MODE;
-volatile uint8_t currentServer = 1;  // 1 = Player 1, 0 = Player 2
+//-------------------------------------------------------------------------------------
+// Button Indices and Definitions
+//-------------------------------------------------------------------------------------
+#define NUM_BUTTONS 3
+#define BTN_RIGHT   0  // PC0
+#define BTN_LEFT    1  // PC1
+#define BTN_USER    2  // PC13
 
-/*=============================================================================
- * init_LEDs_PC5to12()
- * Configures the GPIO pins for the 8 playfield LEDs (PC5–PC12)
- * and the score LEDs for both players.
- =============================================================================*/
-void init_LEDs_PC5to12(void)
+//-------------------------------------------------------------------------------------
+// Exported global button array
+//-------------------------------------------------------------------------------------
+volatile Button buttons[NUM_BUTTONS] = {
+    [BTN_RIGHT] = {0xFF, 1, GPIOC, 0},   // default released
+    [BTN_LEFT]  = {0xFF, 1, GPIOC, 1},
+    [BTN_USER]  = {0xFF, 1, GPIOC, 13}
+};
+
+//-------------------------------------------------------------------------------------
+// Button Initialization
+//-------------------------------------------------------------------------------------
+void init_Buttons(void)
 {
+    // Enable GPIOC clock
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN;
-    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOHEN;
 
-    // --- Playfield LEDs: PC5–PC12 ---
-    for (int pin = 5; pin <= 12; pin++) {
-        GPIOC->MODER   &= ~(3UL << (pin * 2));
-        GPIOC->MODER   |=  (1UL << (pin * 2));
-        GPIOC->OTYPER  &= ~(1UL << pin);
-        GPIOC->OSPEEDR &= ~(3UL << (pin * 2));
-        GPIOC->PUPDR   &= ~(3UL << (pin * 2));
-    }
+    // --- PC0 (BTN_RIGHT) ---
+    GPIOC->MODER  &= ~GPIO_MODER_MODE0_Msk;   // Input mode
+    GPIOC->PUPDR  &= ~GPIO_PUPDR_PUPD0_Msk;
+    GPIOC->PUPDR  |=  GPIO_PUPDR_PUPD0_0;     // Pull-up
 
-    // --- Player 1 Score: PC14, PC15, PH0 ---
-    GPIOC->MODER &= ~(3UL << (14 * 2));
-    GPIOC->MODER |=  (1UL << (14 * 2));
-    GPIOC->OTYPER  &= ~(1UL << 14);
-    GPIOC->OSPEEDR &= ~(3UL << (14 * 2));
-    GPIOC->PUPDR   &= ~(3UL << (14 * 2));
+    // --- PC1 (BTN_LEFT) ---
+    GPIOC->MODER  &= ~GPIO_MODER_MODE1_Msk;
+    GPIOC->PUPDR  &= ~GPIO_PUPDR_PUPD1_Msk;
+    GPIOC->PUPDR  |=  GPIO_PUPDR_PUPD1_0;
 
-    GPIOC->MODER &= ~(3UL << (15 * 2));
-    GPIOC->MODER |=  (1UL << (15 * 2));
-    GPIOC->OTYPER  &= ~(1UL << 15);
-    GPIOC->OSPEEDR &= ~(3UL << (15 * 2));
-    GPIOC->PUPDR   &= ~(3UL << (15 * 2));
-
-    GPIOH->MODER &= ~(3UL << (0 * 2));
-    GPIOH->MODER |=  (1UL << (0 * 2));
-    GPIOH->OTYPER  &= ~(1UL << 0);
-    GPIOH->OSPEEDR &= ~(3UL << (0 * 2));
-    GPIOH->PUPDR   &= ~(3UL << (0 * 2));
-
-    // --- Player 2 Score: PH1, PC2, PC3 ---
-    GPIOH->MODER &= ~(3UL << (1 * 2));
-    GPIOH->MODER |=  (1UL << (1 * 2));
-    GPIOH->OTYPER  &= ~(1UL << 1);
-    GPIOH->OSPEEDR &= ~(3UL << (1 * 2));
-    GPIOH->PUPDR   &= ~(3UL << (1 * 2));
-
-    GPIOC->MODER &= ~(3UL << (2 * 2));
-    GPIOC->MODER |=  (1UL << (2 * 2));
-    GPIOC->OTYPER  &= ~(1UL << 2);
-    GPIOC->OSPEEDR &= ~(3UL << (2 * 2));
-    GPIOC->PUPDR   &= ~(3UL << (2 * 2));
-
-    GPIOC->MODER &= ~(3UL << (3 * 2));
-    GPIOC->MODER |=  (1UL << (3 * 2));
-    GPIOC->OTYPER  &= ~(1UL << 3);
-    GPIOC->OSPEEDR &= ~(3UL << (3 * 2));
-    GPIOC->PUPDR   &= ~(3UL << (3 * 2));
-}
-
-/*=============================================================================
- * update_LEDs_PC5to12()
- * Updates the playfield LEDs using the current ledPattern.
- =============================================================================*/
-void update_LEDs_PC5to12(void)
-{
-    GPIOC->ODR &= ~(0xFF << 5);  // Clear PC5–PC12
-    GPIOC->ODR |= ((ledPattern & 0xFF) << 5);  // Set new pattern
-}
-
-/*=============================================================================
- * shiftRight()
- * Shifts the ball one LED to the right. Returns 0 if at end.
- =============================================================================*/
-int shiftRight(void)
-{
-    if (ledPattern == 0x01) return 0;
-    ledPattern >>= 1;
-    update_LEDs_PC5to12();
-    return 1;
-}
-
-/*=============================================================================
- * shiftLeft()
- * Shifts the ball one LED to the left. Returns 0 if at end.
- =============================================================================*/
-int shiftLeft(void)
-{
-    if (ledPattern == 0x80) return 0;
-    ledPattern <<= 1;
-    update_LEDs_PC5to12();
-    return 1;
-}
-
-/*=============================================================================
- * serve()
- * Places the LED ball at the starting position based on the server.
- =============================================================================*/
-void serve(void)
-{
-    if (currentServer == 1) {
-        ledPattern = 0x01;  // Player 1 serve from left
-    } else {
-        ledPattern = 0x80;  // Player 2 serve from right
-    }
-    update_LEDs_PC5to12();
-}
-
-/*=============================================================================
- * updatePlayerScore()
- * Lights up LEDs for the score of the specified player (1 or 2).
- =============================================================================*/
-void updatePlayerScore(uint8_t score, uint8_t player)
-{
-    if (player == 1) {
-        // Player 1: PC14, PC15, PH0
-        GPIOC->ODR &= ~((1 << 14) | (1 << 15));
-        GPIOH->ODR &= ~(1 << 0);
-
-        if (score >= 1) GPIOC->ODR |= (1 << 14);
-        if (score >= 2) GPIOC->ODR |= (1 << 15);
-        if (score >= 3) GPIOH->ODR |= (1 << 0);
-    }
-    else if (player == 2) {
-        // Player 2: PH1, PC2, PC3
-        GPIOH->ODR &= ~(1 << 1);
-        GPIOC->ODR &= ~((1 << 2) | (1 << 3));
-
-        if (score >= 1) GPIOH->ODR |= (1 << 1);
-        if (score >= 2) GPIOC->ODR |= (1 << 2);
-        if (score >= 3) GPIOC->ODR |= (1 << 3);
-    }
+    // --- PC13 (BTN_USER) ---
+    GPIOC->MODER  &= ~GPIO_MODER_MODE13_Msk;
+    GPIOC->PUPDR  &= ~GPIO_PUPDR_PUPD13_Msk;
+    GPIOC->PUPDR  |=  GPIO_PUPDR_PUPD13_0;     // Pull-up for stability
 }
