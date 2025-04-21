@@ -27,7 +27,14 @@
 typedef enum {
     STATE_SERVE,
     STATE_SHIFT_LEFT,
-    STATE_SHIFT_RIGHT
+    STATE_SHIFT_RIGHT,
+    STATE_RIGHT_HITZONE,
+    STATE_LEFT_HITZONE,
+    STATE_RIGHT_HIT,
+    STATE_LEFT_HIT,
+    STATE_RIGHT_MISS
+    
+   
 } PongState;
 
 static PongState gameState = STATE_SERVE;
@@ -80,17 +87,17 @@ int main(void)
                             if (ledPattern == 0x80) {
                                 // Ball at Player 2's paddle
                                 if ((GPIOC->IDR & (1 << 0)) == 0) {
-                                    // 🎯 Player 2 hit successfully — bounce back
+                                    //  Player 2 hit successfully — bounce back
                                     gameState = STATE_SHIFT_RIGHT;
                                 } else {
-                                    // ❌ Player 2 missed — Player 1 scores
+                                    //  Player 2 missed — Player 1 scores
                                     player1Score++;
                                     currentServer = 0;
                                     serve();
                                     gameState = STATE_SERVE;
                                 }
                             } else if ((GPIOC->IDR & (1 << 0)) == 0) {
-                                // ❌ Player 2 hit too early
+                                //  Player 2 hit too early
                                 player1Score++;
                                 currentServer = 0;
                                 serve();
