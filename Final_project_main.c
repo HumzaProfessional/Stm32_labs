@@ -19,11 +19,10 @@
 
 // === Configuration ===
 #define SYS_CLK_FREQ       4000000
-#define MAX_SPEED_TICKS    100000     // Fastest speed
-#define SPEED_STEP         100000     // Speedup per hit
-#define INITIAL_SPEED      400000     // ~10Hz
+#define MAX_SPEED_TICKS    100000
+#define SPEED_STEP         100000
+#define INITIAL_SPEED      400000
 
-// === Pong States ===
 typedef enum {
     STATE_SERVE,
     STATE_SHIFT_LEFT,
@@ -36,15 +35,13 @@ typedef enum {
     STATE_LEFT_MISS
 } PongState;
 
-// === Global Variables ===
 static PongState gameState = STATE_SERVE;
 static uint8_t player1Score = 0;
 static uint8_t player2Score = 0;
 uint32_t currentSpeed = INITIAL_SPEED;
 static int hitWaitTicks = 0;
-uint32_t msTimer = 0;  // Global for SysTick timing
+uint32_t msTimer = 0;
 
-// === Function Prototypes ===
 void configureSysTick(uint32_t reloadValue);
 void SysTick_Handler(void);
 
@@ -52,11 +49,10 @@ int main(void)
 {
     init_Buttons();
     init_LEDs_PC5to12();
-
     configureSysTick(currentSpeed);
-    serve();  // Set starting ledPattern and currentServer
+    serve();
 
-    while (1);  // All logic handled in SysTick_Handler()
+    while (1);
 }
 
 void configureSysTick(uint32_t reloadValue)
@@ -72,27 +68,20 @@ void SysTick_Handler(void)
 {
     msTimer++;
 
-    // === Debounce Buttons ===
     for (int i = 0; i < NUM_BUTTONS; i++) {
         buttons[i].filter <<= 1U;
         if (buttons[i].port->IDR & (1U << buttons[i].pin))
             buttons[i].filter |= 1U;
 
-        buttons[i].filter &= 0xFF;  // 8-bit debounce window
+        buttons[i].filter &= 0xFF;
 
         switch (buttons[i].filter) {
-            case 0x00:
-                buttons[i].state = 0; // pressed
-                break;
-            case 0xFF:
-                buttons[i].state = 1; // released
-                break;
-            default:
-                break;
+            case 0x00: buttons[i].state = 0; break;
+            case 0xFF: buttons[i].state = 1; break;
+            default: break;
         }
     }
 
-    // === Pong State Machine ===
     switch (gameState)
     {
         case STATE_SERVE:
@@ -107,20 +96,16 @@ void SysTick_Handler(void)
             break;
 
         case STATE_SHIFT_LEFT:
-            if (!shiftLeft()) {
-                if (ledPattern == 0x80) {
-                    gameState = STATE_RIGHT_HITZONE;
-                    hitWaitTicks = 0;
-                }
+            if (!shiftLeft() && ledPattern == 0x80) {
+                gameState = STATE_RIGHT_HITZONE;
+                hitWaitTicks = 0;
             }
             break;
 
         case STATE_SHIFT_RIGHT:
-            if (!shiftRight()) {
-                if (ledPattern == 0x01) {
-                    gameState = STATE_LEFT_HITZONE;
-                    hitWaitTicks = 0;
-                }
+            if (!shiftRight() && ledPattern == 0x01) {
+                gameState = STATE_LEFT_HITZONE;
+                hitWaitTicks = 0;
             }
             break;
 
@@ -158,6 +143,7 @@ void SysTick_Handler(void)
 
         case STATE_RIGHT_MISS:
             player1Score++;
+            updatePlayerScore(player1Score, 1);  //
             currentSpeed = INITIAL_SPEED;
             configureSysTick(currentSpeed);
             currentServer = 0;
@@ -167,6 +153,7 @@ void SysTick_Handler(void)
 
         case STATE_LEFT_MISS:
             player2Score++;
+            updatePlayerScore(player2Score, 2);  
             currentSpeed = INITIAL_SPEED;
             configureSysTick(currentSpeed);
             currentServer = 1;
