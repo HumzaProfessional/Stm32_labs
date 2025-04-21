@@ -63,12 +63,7 @@ int main(void)
     serve();  // Start the game
 
         while (1)
-        {
-            if (!tickFlag)
-                continue;
-
-            tickFlag = 0;
-
+	{
            
 
 
@@ -85,8 +80,6 @@ void configureSysTick(void)
 
 void SysTick_Handler(void)
 {
-
-	tickFlag = 1;  // set flag every interval
     msTimer++;
     for (int i = 0; i < NUM_BUTTONS; i++) {
         buttons[i].filter <<= 1U;
