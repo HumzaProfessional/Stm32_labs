@@ -32,5 +32,8 @@ int shiftLeft(void);
 // Game feedback functions
 void serve(void);  // Draws the current server's LED
 
+void updatePlayerScore(uint8_t score, uint8_t player);
+
+
 
 #endif
