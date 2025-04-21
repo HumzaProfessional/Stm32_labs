@@ -67,22 +67,23 @@ void configureSysTick(uint32_t reloadValue)
 
 void SysTick_Handler(void)
 {
-    msTimer++;
-    for (int i = 0; i < NUM_BUTTONS; i++) {
-        buttons[i].filter <<= 1U;
-        if (buttons[i].port->IDR & (1U << buttons[i].pin))
-            buttons[i].filter |= 1U;
+    buttons[i].filter <<= 1U;
+     if (buttons[i].port->IDR & (1U << buttons[i].pin))
+    buttons[i].filter |= 1U;
 
-        switch (buttons[i].filter) {
-            case 0x00:
-                buttons[i].state = 0;
-                break;
-            case 0xFF:
-                buttons[i].state = 1;
-                break;
-            default:
-                break;
-        }
+buttons[i].filter &= 0xFF; // <-- limit to 8 bits
+
+switch (buttons[i].filter) {
+    case 0x00:
+        buttons[i].state = 0; // Stable press
+        break;
+    case 0xFF:
+        buttons[i].state = 1; // Stable release
+        break;
+    default:
+        break; // Still bouncing
+}
+
     }
 
   switch (gameState)
