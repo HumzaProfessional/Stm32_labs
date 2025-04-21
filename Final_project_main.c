@@ -29,13 +29,13 @@ typedef enum {
     STATE_SHIFT_LEFT,
     STATE_SHIFT_RIGHT,
     STATE_RIGHT_HITZONE,
-    STATE_LEFT_HITZONE,
     STATE_RIGHT_HIT,
+    STATE_RIGHT_MISS,
+    STATE_LEFT_HITZONE,
     STATE_LEFT_HIT,
-    STATE_RIGHT_MISS
-    
-   
+    STATE_LEFT_MISS
 } PongState;
+
 
 static PongState gameState = STATE_SERVE;
 
