@@ -17,12 +17,13 @@
  *  A form of debouncing is used to resolve noise between button presses.
  */
 
-#define SYS_CLK_FREQ 4000000
-#define MAX_SPEED_TICKS  200000   // Fastest speed
-#define SPEED_STEP        150000   // How much to subtract per hit
+// === Configuration ===
+#define SYS_CLK_FREQ       4000000
+#define MAX_SPEED_TICKS    100000     // Fastest speed
+#define SPEED_STEP         100000     // Speedup per hit
+#define INITIAL_SPEED      400000     // ~10Hz
 
-
-// Game state
+// === Pong States ===
 typedef enum {
     STATE_SERVE,
     STATE_SHIFT_LEFT,
@@ -35,13 +36,15 @@ typedef enum {
     STATE_LEFT_MISS
 } PongState;
 
+// === Global Variables ===
 static PongState gameState = STATE_SERVE;
 static uint8_t player1Score = 0;
 static uint8_t player2Score = 0;
-uint32_t currentSpeed = 400000;  // Start at ~10Hz
+uint32_t currentSpeed = INITIAL_SPEED;
 static int hitWaitTicks = 0;
-static uint32_t msTimer = 0;
+uint32_t msTimer = 0;  // Global for SysTick timing
 
+// === Function Prototypes ===
 void configureSysTick(uint32_t reloadValue);
 void SysTick_Handler(void);
 
@@ -51,42 +54,46 @@ int main(void)
     init_LEDs_PC5to12();
 
     configureSysTick(currentSpeed);
-    serve();
+    serve();  // Set starting ledPattern and currentServer
 
-    while (1);
+    while (1);  // All logic handled in SysTick_Handler()
 }
 
 void configureSysTick(uint32_t reloadValue)
 {
-    SysTick->LOAD = reloadValue - 1;
-    SysTick->VAL  = 0;
-    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
-                    SysTick_CTRL_TICKINT_Msk |
-                    SysTick_CTRL_ENABLE_Msk;
+    SysTick->LOAD  = reloadValue - 1;
+    SysTick->VAL   = 0;
+    SysTick->CTRL  = SysTick_CTRL_CLKSOURCE_Msk |
+                     SysTick_CTRL_TICKINT_Msk |
+                     SysTick_CTRL_ENABLE_Msk;
 }
 
 void SysTick_Handler(void)
 {
-    buttons[i].filter <<= 1U;
-     if (buttons[i].port->IDR & (1U << buttons[i].pin))
-    buttons[i].filter |= 1U;
+    msTimer++;
 
-buttons[i].filter &= 0xFF; // <-- limit to 8 bits
+    // === Debounce Buttons ===
+    for (int i = 0; i < NUM_BUTTONS; i++) {
+        buttons[i].filter <<= 1U;
+        if (buttons[i].port->IDR & (1U << buttons[i].pin))
+            buttons[i].filter |= 1U;
 
-switch (buttons[i].filter) {
-    case 0x00:
-        buttons[i].state = 0; // Stable press
-        break;
-    case 0xFF:
-        buttons[i].state = 1; // Stable release
-        break;
-    default:
-        break; // Still bouncing
-}
+        buttons[i].filter &= 0xFF;  // 8-bit debounce window
 
+        switch (buttons[i].filter) {
+            case 0x00:
+                buttons[i].state = 0; // pressed
+                break;
+            case 0xFF:
+                buttons[i].state = 1; // released
+                break;
+            default:
+                break;
+        }
     }
 
-  switch (gameState)
+    // === Pong State Machine ===
+    switch (gameState)
     {
         case STATE_SERVE:
             serve();
@@ -121,10 +128,8 @@ switch (buttons[i].filter) {
             hitWaitTicks++;
             if (buttons[BTN_RIGHT].state == 0) {
                 gameState = STATE_RIGHT_HIT;
-                hitWaitTicks = 0;
             } else if (hitWaitTicks > 3) {
                 gameState = STATE_RIGHT_MISS;
-                hitWaitTicks = 0;
             }
             break;
 
@@ -132,10 +137,8 @@ switch (buttons[i].filter) {
             hitWaitTicks++;
             if (buttons[BTN_LEFT].state == 0) {
                 gameState = STATE_LEFT_HIT;
-                hitWaitTicks = 0;
             } else if (hitWaitTicks > 3) {
                 gameState = STATE_LEFT_MISS;
-                hitWaitTicks = 0;
             }
             break;
 
@@ -155,7 +158,7 @@ switch (buttons[i].filter) {
 
         case STATE_RIGHT_MISS:
             player1Score++;
-            currentSpeed = 800000;
+            currentSpeed = INITIAL_SPEED;
             configureSysTick(currentSpeed);
             currentServer = 0;
             serve();
@@ -164,7 +167,7 @@ switch (buttons[i].filter) {
 
         case STATE_LEFT_MISS:
             player2Score++;
-            currentSpeed = 800000;
+            currentSpeed = INITIAL_SPEED;
             configureSysTick(currentSpeed);
             currentServer = 1;
             serve();
