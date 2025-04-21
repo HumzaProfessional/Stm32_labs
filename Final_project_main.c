@@ -38,7 +38,7 @@ typedef enum {
 static PongState gameState = STATE_SERVE;
 static uint8_t player1Score = 0;
 static uint8_t player2Score = 0;
-uint32_t currentSpeed = 8000000;  // Start slow
+uint32_t currentSpeed = 400000;  // Start at ~10Hz
 static int hitWaitTicks = 0;
 static uint32_t msTimer = 0;
 
