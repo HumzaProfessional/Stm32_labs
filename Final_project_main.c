@@ -20,15 +20,14 @@
 
 
 #define SYS_CLK_FREQ 4000000
-#define SYSTICK_2HZ   ((SYS_CLK_FREQ / 2) - 1)
+#define SYSTICK_2HZ   ((SYS_CLK_FREQ / 5) - 1)
 #define START_SYSTICK() (SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk)
 
 // Game state
 typedef enum {
     STATE_SERVE,
     STATE_SHIFT_LEFT,
-    STATE_SHIFT_RIGHT,
-    STATE_CHECK_HIT
+    STATE_SHIFT_RIGHT
 } PongState;
 
 static PongState gameState = STATE_SERVE;
@@ -36,6 +35,7 @@ static PongState gameState = STATE_SERVE;
 
 static uint32_t msTimer = 0;
 volatile uint8_t tickFlag = 0;
+int hitTimeout = 0;
 
 
 void configureSysTick(void);
@@ -74,46 +74,36 @@ int main(void)
                     break;
 
                 case STATE_SHIFT_LEFT:
+                    // Opponent hit? (Player 2 = PC0)
+                    if ((GPIOC->IDR & (1 << 0)) == 0) {
+                        gameState = STATE_SHIFT_RIGHT;
+                        break;
+                    }
+
                     if (!shiftLeft()) {
-                        gameState = STATE_CHECK_HIT;
+                        // Ball missed — Player 1 scores
+                        currentServer = 0;
+                        serve();
+                        gameState = STATE_SERVE;
                     }
                     break;
 
                 case STATE_SHIFT_RIGHT:
-                    if (!shiftRight()) {
-                        gameState = STATE_CHECK_HIT;
+                    // Opponent hit? (Player 1 = PC1)
+                    if ((GPIOC->IDR & (1 << 1)) == 0) {
+                        gameState = STATE_SHIFT_LEFT;
+                        break;
                     }
-                    break;
 
-                case STATE_CHECK_HIT:
-                    if (ledPattern == 0x80) {
-                        // Player 2 has a chance to hit at PC12 (rightmost)
-                        if ((GPIOC->IDR & (1 << 0)) == 0) {  // PC0 = Player 2
-                            gameState = STATE_SHIFT_RIGHT;  // Ball returns to Player 1
-                        } else {
-                            // Player 1 scores
-                            currentServer = 0;
-                            serve();
-                            gameState = STATE_SERVE;
-                        }
-                    }
-                    else if (ledPattern == 0x01) {
-                        // Player 1 has a chance to hit at PC5 (leftmost)
-                        if ((GPIOC->IDR & (1 << 1)) == 0) {  // PC1 = Player 1
-                            gameState = STATE_SHIFT_LEFT;  // Ball returns to Player 2
-                        } else {
-                            // Player 2 scores
-                            currentServer = 1;
-                            serve();
-                            gameState = STATE_SERVE;
-                        }
-                    } else {
-                        // Shouldn't happen, safety reset
+                    if (!shiftRight()) {
+                        // Ball missed — Player 2 scores
+                        currentServer = 1;
                         serve();
                         gameState = STATE_SERVE;
                     }
                     break;
             }
+
 
         }
 }
@@ -148,5 +138,4 @@ void SysTick_Handler(void)
         }
     }
 }
-
 
