@@ -134,13 +134,15 @@ void serve(void)
 void updatePlayerScore(uint8_t score, uint8_t player)
 {
     if (player == 1) {
-        // Player 1: PC14, PC15, PH0
-        GPIOC->ODR &= ~((1 << 14) | (1 << 15));
-        GPIOH->ODR &= ~(1 << 0);
+    // Player 1 Score LEDs: PB8, PB9, PH0
+    GPIOB->ODR &= ~((1 << 8) | (1 << 9));
+    GPIOH->ODR &= ~(1 << 0);
 
-        if (score >= 1) GPIOC->ODR |= (1 << 14);
-        if (score >= 2) GPIOC->ODR |= (1 << 15);
-        if (score >= 3) GPIOH->ODR |= (1 << 0);
+    if (score >= 1) GPIOB->ODR |= (1 << 8);
+    if (score >= 2) GPIOB->ODR |= (1 << 9);
+    if (score >= 3) GPIOH->ODR |= (1 << 0);
+      }
+
     }
     else if (player == 2) {
         // Player 2: PH1, PC2, PC3
