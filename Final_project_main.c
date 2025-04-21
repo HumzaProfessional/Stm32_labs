@@ -28,6 +28,7 @@ typedef enum {
     STATE_SERVE,
     STATE_SHIFT_LEFT,
     STATE_SHIFT_RIGHT,
+    STATE_CHECK_HIT
 } PongState;
 
 static PongState gameState = STATE_SERVE;
@@ -60,59 +61,59 @@ int main(void)
             tickFlag = 0;
 
             switch (gameState)
-{
-    case STATE_SERVE:
-        if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||  // PC1 = P1
-            (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {  // PC0 = P2
+            {
+                case STATE_SERVE:
+                    if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||  // PC1 = P1
+                        (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {  // PC0 = P2
 
-            if (ledPattern == 0x01)
-                gameState = STATE_SHIFT_LEFT;
-            else if (ledPattern == 0x80)
-                gameState = STATE_SHIFT_RIGHT;
-        }
-        break;
+                        if (ledPattern == 0x01)
+                            gameState = STATE_SHIFT_LEFT;
+                        else if (ledPattern == 0x80)
+                            gameState = STATE_SHIFT_RIGHT;
+                    }
+                    break;
 
-    case STATE_SHIFT_LEFT:
-        if (!shiftLeft()) {
-            gameState = STATE_CHECK_HIT;
-        }
-        break;
+                case STATE_SHIFT_LEFT:
+                    if (!shiftLeft()) {
+                        gameState = STATE_CHECK_HIT;
+                    }
+                    break;
 
-    case STATE_SHIFT_RIGHT:
-        if (!shiftRight()) {
-            gameState = STATE_CHECK_HIT;
-        }
-        break;
+                case STATE_SHIFT_RIGHT:
+                    if (!shiftRight()) {
+                        gameState = STATE_CHECK_HIT;
+                    }
+                    break;
 
-    case STATE_CHECK_HIT:
-        if (ledPattern == 0x80) {
-            // Player 2 has a chance to hit at PC12 (rightmost)
-            if ((GPIOC->IDR & (1 << 0)) == 0) {  // PC0 = Player 2
-                gameState = STATE_SHIFT_RIGHT;  // Ball returns to Player 1
-            } else {
-                // Player 1 scores
-                currentServer = 0;
-                serve();
-                gameState = STATE_SERVE;
+                case STATE_CHECK_HIT:
+                    if (ledPattern == 0x80) {
+                        // Player 2 has a chance to hit at PC12 (rightmost)
+                        if ((GPIOC->IDR & (1 << 0)) == 0) {  // PC0 = Player 2
+                            gameState = STATE_SHIFT_RIGHT;  // Ball returns to Player 1
+                        } else {
+                            // Player 1 scores
+                            currentServer = 0;
+                            serve();
+                            gameState = STATE_SERVE;
+                        }
+                    }
+                    else if (ledPattern == 0x01) {
+                        // Player 1 has a chance to hit at PC5 (leftmost)
+                        if ((GPIOC->IDR & (1 << 1)) == 0) {  // PC1 = Player 1
+                            gameState = STATE_SHIFT_LEFT;  // Ball returns to Player 2
+                        } else {
+                            // Player 2 scores
+                            currentServer = 1;
+                            serve();
+                            gameState = STATE_SERVE;
+                        }
+                    } else {
+                        // Shouldn't happen, safety reset
+                        serve();
+                        gameState = STATE_SERVE;
+                    }
+                    break;
             }
-        }
-        else if (ledPattern == 0x01) {
-            // Player 1 has a chance to hit at PC5 (leftmost)
-            if ((GPIOC->IDR & (1 << 1)) == 0) {  // PC1 = Player 1
-                gameState = STATE_SHIFT_LEFT;  // Ball returns to Player 2
-            } else {
-                // Player 2 scores
-                currentServer = 1;
-                serve();
-                gameState = STATE_SERVE;
-            }
-        } else {
-            // Shouldn't happen, safety reset
-            serve();
-            gameState = STATE_SERVE;
-        }
-        break;
-}
 
         }
 }
@@ -147,4 +148,5 @@ void SysTick_Handler(void)
         }
     }
 }
+
 
