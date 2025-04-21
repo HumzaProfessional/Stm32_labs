@@ -35,7 +35,9 @@ static PongState gameState = STATE_SERVE;
 
 static uint32_t msTimer = 0;
 volatile uint8_t tickFlag = 0;
-int hitTimeout = 0;
+uint8_t player1Score = 0;
+uint8_t player2Score = 0;
+
 
 
 void configureSysTick(void);
@@ -61,48 +63,79 @@ int main(void)
             tickFlag = 0;
 
             switch (gameState)
-            {
-                case STATE_SERVE:
-                    if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||  // PC1 = P1
-                        (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {  // PC0 = P2
+                    {
+                        case STATE_SERVE:
+                            // Wait for correct player to press button
+                            if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||
+                                (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0)) {
 
-                        if (ledPattern == 0x01)
-                            gameState = STATE_SHIFT_LEFT;
-                        else if (ledPattern == 0x80)
-                            gameState = STATE_SHIFT_RIGHT;
-                    }
-                    break;
+                                if (ledPattern == 0x01)
+                                    gameState = STATE_SHIFT_LEFT;
+                                else if (ledPattern == 0x80)
+                                    gameState = STATE_SHIFT_RIGHT;
+                            }
+                            break;
 
-                case STATE_SHIFT_LEFT:
-                    // Opponent hit? (Player 2 = PC0)
-                    if ((GPIOC->IDR & (1 << 0)) == 0) {
-                        gameState = STATE_SHIFT_RIGHT;
-                        break;
-                    }
+                        case STATE_SHIFT_LEFT:
+                            if (ledPattern == 0x80) {
+                                // Ball at Player 2's paddle
+                                if ((GPIOC->IDR & (1 << 0)) == 0) {
+                                    // 🎯 Player 2 hit successfully — bounce back
+                                    gameState = STATE_SHIFT_RIGHT;
+                                } else {
+                                    // ❌ Player 2 missed — Player 1 scores
+                                    player1Score++;
+                                    currentServer = 0;
+                                    serve();
+                                    gameState = STATE_SERVE;
+                                }
+                            } else if ((GPIOC->IDR & (1 << 0)) == 0) {
+                                // ❌ Player 2 hit too early
+                                player1Score++;
+                                currentServer = 0;
+                                serve();
+                                gameState = STATE_SERVE;
+                            } else if (!shiftLeft()) {
+                                // ❌ Ball went past — Player 1 scores
+                                player1Score++;
+                                currentServer = 0;
+                                serve();
+                                gameState = STATE_SERVE;
+                            }
+                            break;
 
-                    if (!shiftLeft()) {
-                        // Ball missed — Player 1 scores
-                        currentServer = 0;
-                        serve();
-                        gameState = STATE_SERVE;
-                    }
-                    break;
 
-                case STATE_SHIFT_RIGHT:
-                    // Opponent hit? (Player 1 = PC1)
-                    if ((GPIOC->IDR & (1 << 1)) == 0) {
-                        gameState = STATE_SHIFT_LEFT;
-                        break;
-                    }
 
-                    if (!shiftRight()) {
-                        // Ball missed — Player 2 scores
-                        currentServer = 1;
-                        serve();
-                        gameState = STATE_SERVE;
+                        case STATE_SHIFT_RIGHT:
+                            if (ledPattern == 0x01) {
+                                // Ball at Player 1's paddle
+                                if ((GPIOC->IDR & (1 << 1)) == 0) {
+                                    // 🎯 Player 1 hit successfully — bounce back
+                                    gameState = STATE_SHIFT_LEFT;
+                                } else {
+                                    // ❌ Player 1 missed
+                                    player2Score++;
+                                    currentServer = 1;
+                                    serve();
+                                    gameState = STATE_SERVE;
+                                }
+                            } else if ((GPIOC->IDR & (1 << 1)) == 0) {
+                                // ❌ Player 1 hit too early
+                                player2Score++;
+                                currentServer = 1;
+                                serve();
+                                gameState = STATE_SERVE;
+                            } else if (!shiftRight()) {
+                                // ❌ Ball passed edge
+                                player2Score++;
+                                currentServer = 1;
+                                serve();
+                                gameState = STATE_SERVE;
+                            }
+                            break;
+
+
                     }
-                    break;
-            }
 
 
         }
@@ -138,4 +171,3 @@ void SysTick_Handler(void)
         }
     }
 }
-
