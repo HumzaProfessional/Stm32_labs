@@ -1,4 +1,5 @@
-
+#ifndef LED_SETUP_H
+#define LED_SETUP_H
 /*************************************************
  * @file: led_setup.h
  *
@@ -9,22 +10,27 @@
 
 #include <stdint.h>
 
+// LED modes (used in main to toggle between modes)
 #define PLAY_MODE 0
 #define FLASH_LED_MODE 1
 
+// Global LED state variables (defined in led_setup.c)
 extern volatile uint8_t ledPattern;
 extern volatile uint8_t led_mode;
+extern volatile uint8_t currentServer;
+
+// Initialization
+void init_LEDs_PC5to12(void);
+
+// Update playfield LEDs
+void update_LEDs_PC5to12();
+
+// LED shifting functions (called by main's state machine)
+int shiftRight(void);
+int shiftLeft(void);
+
+// Game feedback functions
+void serve(void);  // Draws the current server's LED
 
 
-// Configure PC8..PC15 as outputs for LEDs.
-void init_LEDs_PC6to13(void);
-
-// Write an 8-bit pattern to PC8..PC15 (bit 0 => PC8, bit 7 => PC15).
-void update_LEDs_PC6to13(uint8_t ledPattern, uint8_t led_mode);
-
-void playMode(void);
-void score(int whoScored);
-void serve(void);
-void displayPlayerScore(uint8_t score, uint8_t player);
-
-#endif // LED_SETUP_H
+#endif
