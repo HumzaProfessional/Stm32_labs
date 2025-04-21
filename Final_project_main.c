@@ -1,4 +1,3 @@
-
 #include "stm32l476xx.h"
 #include "led_setup.h"
 #include "buttons.h"
@@ -15,15 +14,12 @@
  *  Two buttons are enabled to trigger a Systick interrupt and EXTI interupts for both buttons.
  *  A integer called pattern is used to determine what leds are lit depeding on the mode.
  *  Systick, defined speeds, and an array are used to determine the speed of frequency of events.
- * A form of debouncing is used to resolve noise between button presses.
+ *  A form of debouncing is used to resolve noise between button presses.
  */
-
 
 #define SYS_CLK_FREQ 4000000
 #define MAX_SPEED_TICKS  200000   // Fastest speed
 #define SPEED_STEP        300000   // How much to subtract per hit
-//#define SYSTICK_2HZ   ((SYS_CLK_FREQ / 5) - 1)
-//#define START_SYSTICK() (SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk)
 
 // Game state
 typedef enum {
@@ -38,20 +34,15 @@ typedef enum {
     STATE_LEFT_MISS
 } PongState;
 
-
 static PongState gameState = STATE_SERVE;
-
-
 static uint8_t player1Score = 0;
 static uint8_t player2Score = 0;
 uint32_t currentSpeed = 2000000;  // Start slow
 static int hitWaitTicks = 0;
+static uint32_t msTimer = 0;
 
-
-
-void configureSysTick(void);
+void configureSysTick(uint32_t reloadValue);
 void SysTick_Handler(void);
-
 
 int main(void)
 {
@@ -63,7 +54,6 @@ int main(void)
 
     while (1);
 }
-
 
 void configureSysTick(uint32_t reloadValue)
 {
@@ -94,8 +84,7 @@ void SysTick_Handler(void)
         }
     }
 
-
- switch (gameState)
+    switch (gameState)
     {
         case STATE_SERVE:
             serve();
@@ -180,5 +169,4 @@ void SysTick_Handler(void)
             gameState = STATE_SERVE;
             break;
     }
-
 }
