@@ -115,4 +115,26 @@ void serve(void)
     update_LEDs_PC5to12();
 } // Note: currentServer toggle should be handled in main after serve() if needed
 
+void updatePlayerScore(uint8_t score, uint8_t player)
+{
+    if (player == 1) {
+        // Player 1 Score LEDs: PC14, PC15, PH0
+        GPIOC->ODR &= ~((1 << 14) | (1 << 15));
+        GPIOH->ODR &= ~(1 << 0);
+
+        if (score >= 1) GPIOC->ODR |= (1 << 14);
+        if (score >= 2) GPIOC->ODR |= (1 << 15);
+        if (score >= 3) GPIOH->ODR |= (1 << 0);
+    }
+    else if (player == 2) {
+        // Player 2 Score LEDs: PH1, PC2, PC3
+        GPIOH->ODR &= ~(1 << 1);
+        GPIOC->ODR &= ~((1 << 2) | (1 << 3));
+
+        if (score >= 1) GPIOH->ODR |= (1 << 1);
+        if (score >= 2) GPIOC->ODR |= (1 << 2);
+        if (score >= 3) GPIOC->ODR |= (1 << 3);
+    }
+}
+
 
