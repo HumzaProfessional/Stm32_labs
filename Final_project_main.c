@@ -62,8 +62,9 @@ int main(void)
             switch (gameState)
             {
                 case STATE_SERVE:
-                    if ((currentServer == 1 && buttons[BTN_LEFT].state == 0) ||
-                        (currentServer == 0 && buttons[BTN_RIGHT].state == 0)) {
+                   if ((currentServer == 1 && (GPIOC->IDR & (1 << 1)) == 0) ||
+                     (currentServer == 0 && (GPIOC->IDR & (1 << 0)) == 0))
+                   {
 
                         if (ledPattern == 0x01)
                             gameState = STATE_SHIFT_LEFT;
