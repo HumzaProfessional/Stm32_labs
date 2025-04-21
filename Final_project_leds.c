@@ -1,38 +1,3 @@
-#include "led_setup.h"
-#include "stm32l476xx.h"
-
-/************************************************************
- * @file: led_setup.c
- *
- * This file sets up the LEDs and buttons.
- * It determines which LED is on, depending on the state of led_mode.
- * It clears all bits from PC6–PC13 and uses a global ledPattern variable
- * to determine what LED to light.
- ************************************************************/
-
-#define PLAY_MODE 0
-#define FLASH_LED_MODE 1
-
-
-
-// --- Global LED state ---
-volatile uint8_t ledPattern = 0x01;
-volatile uint8_t led_mode = PLAY_MODE;
-
-void update_LEDs_PC5to12(uint8_t ledPattern, uint8_t led_mode);
-
-
-/*=============================================================================
- * init_LEDs_PC5to12()
- =============================================================================*/
-void init_LEDs_PC5to12(void)
-{
-    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN;
-
-    for (int pin = 5; pin <= 12; pin++) {
-        GPIOC->MODER   &= ~(3UL << (pin * 2));
-        GPIOC->MODER   |=  (1UL << (pin * 2));
-        GPIOC->OTYPER  &= ~(1UL << pin);
         GPIOC->OSPEEDR &= ~(3UL << (pin * 2));
         GPIOC->PUPDR   &= ~(3UL << (pin * 2));
     }
@@ -57,17 +22,14 @@ void init_LEDs_PC5to12(void)
 /*=============================================================================
  * update_LEDs_PC5to12()
  =============================================================================*/
-void update_LEDs_PC5to12(uint8_t ledPattern, uint8_t led_mode){
-    // Clear PC5–PC12
+void update_LEDs_PC5to12(void)
+{
     GPIOC->ODR &= ~(0xFF << 5);
-
-    // Write pattern to PC5–PC12
     GPIOC->ODR |= ((ledPattern & 0xFF) << 5);
 }
 
 int shiftRight(void)
 {
-    // Prevent shifting beyond PC5 (0x01)
     if (ledPattern == 0x01) return 0;
     ledPattern >>= 1;
     update_LEDs_PC5to12();
@@ -76,9 +38,22 @@ int shiftRight(void)
 
 int shiftLeft(void)
 {
-    // Prevent shifting beyond PC12 (0x80)
     if (ledPattern == 0x80) return 0;
     ledPattern <<= 1;
     update_LEDs_PC5to12();
     return 1;
 }
+
+void serve(void)
+{
+    if (currentServer == 1) {
+        ledPattern = 0x01;  // Start at PC5
+        currentServer = 0;  // Next serve by Player 2
+    } else {
+        ledPattern = 0x80;  // Start at PC12
+        currentServer = 1;  // Next serve by Player 1
+    }
+    update_LEDs_PC5to12();
+}
+
+
