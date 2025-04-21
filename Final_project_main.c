@@ -84,3 +84,35 @@ int main(void)
             }
         }
 }
+
+void configureSysTick(void)
+{
+    SysTick->LOAD = SYSTICK_2HZ;
+    SysTick->VAL = 0;
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk |
+                    SysTick_CTRL_TICKINT_Msk;
+}
+
+void SysTick_Handler(void)
+{
+
+	tickFlag = 1;  // set flag every interval
+    msTimer++;
+    for (int i = 0; i < NUM_BUTTONS; i++) {
+        buttons[i].filter <<= 1U;
+        if (buttons[i].port->IDR & (1U << buttons[i].pin))
+            buttons[i].filter |= 1U;
+
+        switch (buttons[i].filter) {
+            case 0x00:
+                buttons[i].state = 0;
+                break;
+            case 0xFF:
+                buttons[i].state = 1;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
