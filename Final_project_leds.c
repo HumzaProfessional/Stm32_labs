@@ -160,3 +160,13 @@ void updatePlayerScore(uint8_t score, uint8_t player)
         if (score >= 3) GPIOC->ODR |= (1 << 3);
     }
 }
+
+uint8_t getCurrentLedPattern(void) {
+    return ledPattern;
+}
+
+void setLedPattern(uint8_t pattern) {
+    ledPattern = pattern;
+    update_LEDs_PC5to12();
+}
+
