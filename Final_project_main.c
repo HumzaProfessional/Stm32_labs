@@ -253,49 +253,30 @@ void handleFlashLedMode(void)
     static uint8_t prevLeftBtn = 1;
     static uint8_t prevRightBtn = 1;
 
-    uint8_t currLeftBtn;
-    uint8_t currRightBtn;
-
-    // Read PC1 (Left Button)
-    if ((GPIOC->IDR & (1 << 1)) != 0)
-        currLeftBtn = 1;
-    else
-        currLeftBtn = 0;
-
-    // Read PC0 (Right Button)
-    if ((GPIOC->IDR & (1 << 0)) != 0)
-        currRightBtn = 1;
-    else
-        currRightBtn = 0;
+    uint8_t currLeftBtn = buttons[BTN_LEFT].state;
+    uint8_t currRightBtn = buttons[BTN_RIGHT].state;
 
     uint8_t currentPattern = getCurrentLedPattern();
 
-    // Left button released → shift right
+    // === LEFT Button Released ===
     if (prevLeftBtn == 0 && currLeftBtn == 1)
     {
         if (currentPattern == 0x80)
-        {
-            setLedPattern(0x01);  // Wrap around to left
-        }
+            setLedPattern(0x01);
         else
-        {
             setLedPattern(currentPattern << 1);
-        }
     }
 
-    // Right button released → shift left
+    // === RIGHT Button Released ===
     if (prevRightBtn == 0 && currRightBtn == 1)
     {
         if (currentPattern == 0x01)
-        {
-            setLedPattern(0x80);  // Wrap around to right
-        }
+            setLedPattern(0x80);
         else
-        {
             setLedPattern(currentPattern >> 1);
-        }
     }
 
     prevLeftBtn = currLeftBtn;
     prevRightBtn = currRightBtn;
 }
+
