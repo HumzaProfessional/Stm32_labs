@@ -81,6 +81,31 @@ void SysTick_Handler(void)
             default: break;
         }
     }
+    static uint8_t prevRawUserBtn = 1;
+uint8_t currRawUserBtn;
+
+if ((GPIOC->IDR & (1 << 13)) != 0) {
+    currRawUserBtn = 1;
+} else {
+    currRawUserBtn = 0;
+}
+
+// Detect rising edge (button released)
+if (prevRawUserBtn == 0 && currRawUserBtn == 1) {
+    if (led_mode == PLAY_MODE) {
+        led_mode = FLASH_LED_MODE;
+        GPIOA->ODR &= ~(1 << 5);  // Turn OFF user LED (PA5)
+    } else {
+        led_mode = PLAY_MODE;
+        GPIOA->ODR |= (1 << 5);   // Turn ON user LED (PA5)
+    }
+
+    // Optional: clear playfield
+    GPIOC->ODR &= ~(0xFF << 5);
+}
+
+prevRawUserBtn = currRawUserBtn;
+
 
     switch (gameState)
     {
