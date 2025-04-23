@@ -44,6 +44,7 @@ uint32_t msTimer = 0;
 
 void configureSysTick(uint32_t reloadValue);
 void SysTick_Handler(void);
+void handleFlashLedMode(void);
 
 int main(void)
 {
@@ -199,4 +200,39 @@ void SysTick_Handler(void)
             gameState = STATE_SERVE;
             break;
     }
+    if (led_mode == FLASH_LED_MODE) {
+    handleFlashLedMode();
+}
+
+}
+void handleFlashLedMode(void)
+{
+    static uint8_t prevLeftBtn = 1;
+    static uint8_t prevRightBtn = 1;
+
+    uint8_t currLeftBtn = buttons[BTN_LEFT].state;
+    uint8_t currRightBtn = buttons[BTN_RIGHT].state;
+
+    uint8_t currentPattern = getCurrentLedPattern();
+
+    // Left button released
+    if (prevLeftBtn == 0 && currLeftBtn == 1) {
+        if (currentPattern == 0x80) {
+            setLedPattern(0x01); // Wrap around
+        } else {
+            setLedPattern(currentPattern << 1);
+        }
+    }
+
+    // Right button released
+    if (prevRightBtn == 0 && currRightBtn == 1) {
+        if (currentPattern == 0x01) {
+            setLedPattern(0x80); // Wrap around
+        } else {
+            setLedPattern(currentPattern >> 1);
+        }
+    }
+
+    prevLeftBtn = currLeftBtn;
+    prevRightBtn = currRightBtn;
 }
