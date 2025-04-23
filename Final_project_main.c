@@ -58,46 +58,64 @@ int main(void)
 {
     init_Buttons();
     init_LEDs_PC5to12();
-    configureSysTick(currentSpeed);
-    serve();  // Initial ball setup
+    configureSysTick(currentSpeed);  // Set initial speed
+    serve();
 
     // Ensure the correct initial state of the user LED
     if (led_mode == PLAY_MODE)
-        GPIOA->ODR |= GPIO_ODR_OD5;
+    {
+        GPIOA->ODR |= GPIO_ODR_OD5;   // Turn ON PA5
+    }
     else
-        GPIOA->ODR &= ~GPIO_ODR_OD5;
+    {
+        GPIOA->ODR &= ~GPIO_ODR_OD5;  // Turn OFF PA5
+    }
 
     uint8_t prevUserBtn = 1;
     uint8_t currUserBtn;
 
     while (1)
     {
-        // Read user button state directly from PC13
+        // Read user button from PC13
         if (GPIOC->IDR & (1 << 13))
             currUserBtn = 1;
         else
             currUserBtn = 0;
 
-        // Detect rising edge: button released
+        // Detect release (rising edge)
         if (prevUserBtn == 0 && currUserBtn == 1)
         {
             if (led_mode == PLAY_MODE)
             {
                 led_mode = FLASH_LED_MODE;
+
+                // Turn OFF user LED
                 GPIOA->ODR &= ~GPIO_ODR_OD5;
+
+                // Reset LED pattern to 0x01
+                setLedPattern(0x01);
+
+                // Set a smooth constant SysTick rate for Flash Mode
+                configureSysTick(INITIAL_SPEED);
             }
             else
             {
                 led_mode = PLAY_MODE;
+
+                // Turn ON user LED
                 GPIOA->ODR |= GPIO_ODR_OD5;
+
+                // Reconfigure SysTick to currentSpeed used for gameplay
+                configureSysTick(currentSpeed);
             }
 
-            // Optional: Clear PC5–PC12 LEDs
+            // Optional: Clear playfield LEDs
             GPIOC->ODR &= ~(0xFF << 5);
         }
 
         prevUserBtn = currUserBtn;
 
+        // Run FLASH mode logic if active
         if (led_mode == FLASH_LED_MODE)
         {
             handleFlashLedMode();
@@ -235,25 +253,45 @@ void handleFlashLedMode(void)
     static uint8_t prevLeftBtn = 1;
     static uint8_t prevRightBtn = 1;
 
-    uint8_t currLeftBtn = buttons[BTN_LEFT].state;
-    uint8_t currRightBtn = buttons[BTN_RIGHT].state;
+    uint8_t currLeftBtn;
+    uint8_t currRightBtn;
+
+    // Read PC1 (Left Button)
+    if ((GPIOC->IDR & (1 << 1)) != 0)
+        currLeftBtn = 1;
+    else
+        currLeftBtn = 0;
+
+    // Read PC0 (Right Button)
+    if ((GPIOC->IDR & (1 << 0)) != 0)
+        currRightBtn = 1;
+    else
+        currRightBtn = 0;
 
     uint8_t currentPattern = getCurrentLedPattern();
 
     // Left button released → shift right
-    if (prevLeftBtn == 0 && currLeftBtn == 1) {
-        if (currentPattern == 0x80) {
-            setLedPattern(0x01); // Wrap around to beginning
-        } else {
+    if (prevLeftBtn == 0 && currLeftBtn == 1)
+    {
+        if (currentPattern == 0x80)
+        {
+            setLedPattern(0x01);  // Wrap around to left
+        }
+        else
+        {
             setLedPattern(currentPattern << 1);
         }
     }
 
     // Right button released → shift left
-    if (prevRightBtn == 0 && currRightBtn == 1) {
-        if (currentPattern == 0x01) {
-            setLedPattern(0x80); // Wrap around to end
-        } else {
+    if (prevRightBtn == 0 && currRightBtn == 1)
+    {
+        if (currentPattern == 0x01)
+        {
+            setLedPattern(0x80);  // Wrap around to right
+        }
+        else
+        {
             setLedPattern(currentPattern >> 1);
         }
     }
