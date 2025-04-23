@@ -52,26 +52,29 @@ int main(void)
     configureSysTick(currentSpeed);
     serve();
 
-   uint8_t prevUserBtn = 1;
+ uint8_t prevUserBtn = 1;
     uint8_t currUserBtn;
 
     while (1)
     {
-        // Poll user button (PC13)
-        currUserBtn = (GPIOC->IDR & USER_BUTTON_PIN) ? 1 : 0;
+        // Read user button state directly from PC13
+        currUserBtn = (GPIOC->IDR & (1 << 13)) ? 1 : 0;
 
-        // Rising edge: button released
+        // Detect rising edge: button released
         if (prevUserBtn == 0 && currUserBtn == 1)
         {
-            if (led_mode == PLAY_MODE) {
+            if (led_mode == PLAY_MODE)
+            {
                 led_mode = FLASH_LED_MODE;
-                GPIOA->ODR &= ~USER_LED_PIN;  // Turn OFF
-            } else {
+                GPIOA->ODR &= ~GPIO_ODR_OD5;  // Turn OFF PA5
+            }
+            else
+            {
                 led_mode = PLAY_MODE;
-                GPIOA->ODR |= USER_LED_PIN;   // Turn ON
+                GPIOA->ODR |= GPIO_ODR_OD5;   // Turn ON PA5
             }
 
-            // Optional: Clear PC5–PC12
+            // Optional: Clear PC5–PC12 LEDs
             GPIOC->ODR &= ~(0xFF << 5);
         }
 
