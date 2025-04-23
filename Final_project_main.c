@@ -91,6 +91,10 @@ int main(void)
         }
 
         prevUserBtn = currUserBtn;
+        if (led_mode == FLASH_LED_MODE)
+        {
+            handleFlashLedMode();
+        }
     }
 }
 
@@ -200,8 +204,7 @@ void SysTick_Handler(void)
             gameState = STATE_SERVE;
             break;
     }
-    if (led_mode == FLASH_LED_MODE) {
-    handleFlashLedMode();
+   
 }
 
 }
