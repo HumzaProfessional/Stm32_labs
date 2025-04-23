@@ -52,7 +52,31 @@ int main(void)
     configureSysTick(currentSpeed);
     serve();
 
-    while (1);
+    uint8_t prevUserBtn = 1;
+    uint8_t currUserBtn
+
+    while (1){
+        
+         currUserBtn = (GPIOC->IDR & USER_BUTTON_PIN) ? 1 : 0;
+
+        // Rising edge: button released
+        if (prevUserBtn == 0 && currUserBtn == 1)
+        {
+            if (led_mode == PLAY_MODE) {
+                led_mode = FLASH_LED_MODE;
+                GPIOA->ODR &= ~USER_LED_PIN;  // Turn OFF
+            } else {
+                led_mode = PLAY_MODE;
+                GPIOA->ODR |= USER_LED_PIN;   // Turn ON
+            }
+
+            // Optional: Clear PC5–PC12
+            GPIOC->ODR &= ~(0xFF << 5);
+        }
+
+        prevUserBtn = currUserBtn;
+    }
+    
 }
 
 void configureSysTick(uint32_t reloadValue)
@@ -81,31 +105,6 @@ void SysTick_Handler(void)
             default: break;
         }
     }
-    static uint8_t prevRawUserBtn = 1;
-uint8_t currRawUserBtn;
-
-if ((GPIOC->IDR & (1 << 13)) != 0) {
-    currRawUserBtn = 1;
-} else {
-    currRawUserBtn = 0;
-}
-
-// Detect rising edge (button released)
-if (prevRawUserBtn == 0 && currRawUserBtn == 1) {
-    if (led_mode == PLAY_MODE) {
-        led_mode = FLASH_LED_MODE;
-        GPIOA->ODR &= ~(1 << 5);  // Turn OFF user LED (PA5)
-    } else {
-        led_mode = PLAY_MODE;
-        GPIOA->ODR |= (1 << 5);   // Turn ON user LED (PA5)
-    }
-
-    // Optional: clear playfield
-    GPIOC->ODR &= ~(0xFF << 5);
-}
-
-prevRawUserBtn = currRawUserBtn;
-
 
     switch (gameState)
     {
