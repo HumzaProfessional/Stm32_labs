@@ -52,12 +52,13 @@ int main(void)
     configureSysTick(currentSpeed);
     serve();
 
-    uint8_t prevUserBtn = 1;
-    uint8_t currUserBtn
+   uint8_t prevUserBtn = 1;
+    uint8_t currUserBtn;
 
-    while (1){
-        
-         currUserBtn = (GPIOC->IDR & USER_BUTTON_PIN) ? 1 : 0;
+    while (1)
+    {
+        // Poll user button (PC13)
+        currUserBtn = (GPIOC->IDR & USER_BUTTON_PIN) ? 1 : 0;
 
         // Rising edge: button released
         if (prevUserBtn == 0 && currUserBtn == 1)
@@ -76,7 +77,6 @@ int main(void)
 
         prevUserBtn = currUserBtn;
     }
-    
 }
 
 void configureSysTick(uint32_t reloadValue)
