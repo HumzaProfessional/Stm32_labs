@@ -51,14 +51,25 @@ int main(void)
     init_LEDs_PC5to12();
     configureSysTick(currentSpeed);
     serve();
-
+// Ensure the correct initial state of the user LED
+    if (led_mode == PLAY_MODE)
+    {
+        GPIOA->ODR |= GPIO_ODR_OD5;   // Turn ON PA5
+    }
+    else
+    {
+        GPIOA->ODR &= ~GPIO_ODR_OD5;  // Turn OFF PA5
+    }
  uint8_t prevUserBtn = 1;
-    uint8_t currUserBtn;
+  uint8_t currUserBtn;
 
     while (1)
     {
         // Read user button state directly from PC13
-        currUserBtn = (GPIOC->IDR & (1 << 13)) ? 1 : 0;
+     if (GPIOC->IDR & (1 << 13))
+            currUserBtn = 1;
+      else
+            currUserBtn = 0;
 
         // Detect rising edge: button released
         if (prevUserBtn == 0 && currUserBtn == 1)
