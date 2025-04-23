@@ -28,6 +28,7 @@ void init_LEDs_PC5to12(void)
 {
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN;
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
+    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOHEN;
 
     // --- Playfield LEDs: PC5–PC12 ---
@@ -77,8 +78,13 @@ void init_LEDs_PC5to12(void)
     GPIOC->OTYPER  &= ~(1UL << 3);
     GPIOC->OSPEEDR &= ~(3UL << (3 * 2));
     GPIOC->PUPDR   &= ~(3UL << (3 * 2));
-}
 
+ //----Configure user LED on Nucleo-L476RG board (LD2 -> Port A, bit 5)-------------------------
+ GPIOA->MODER = (GPIOA->MODER & ~GPIO_MODER_MODE5)| GPIO_MODER_MODE5_0; // output pin (PA5=01)
+GPIOA->OTYPER &= ~(GPIO_OTYPER_OT5); // push-pull (PA5=0)
+ GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED5); // low speed (PA5=00)
+ GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD5
+  }
 /*=============================================================================
  * update_LEDs_PC5to12()
  * Updates the playfield LEDs using the current ledPattern.
