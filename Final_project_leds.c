@@ -101,6 +101,9 @@ void update_LEDs_PC5to12(void)
 
 /*=============================================================================
  * shiftRight()
+   @parameter: None
+   @return: 1 if the shift was occurs all the way.
+            0 if already at the rightmost led and no shift occured.
  * Shifts the ball one LED to the right. Returns 0 if at end.
  =============================================================================*/
 int shiftRight(void)
@@ -113,6 +116,9 @@ int shiftRight(void)
 
 /*=============================================================================
  * shiftLeft()
+   @parameter: None
+   @return: 1 if the shift was occurs all the way.
+            0 if already at the leftmost led and no shift occured.
  * Shifts the ball one LED to the left. Returns 0 if at end.
  =============================================================================*/
 int shiftLeft(void)
@@ -167,7 +173,7 @@ void updatePlayerScore(uint8_t score, uint8_t player)
 
 /*=============================================================================
  * flashWinnerScore()
-  @Parameter: uint8_t winner
+  @Parameter: uint8_t winner - Internal variable that determines what player leds should toggle.
  * Lights up LEDs for the score of the specified player (1 or 2).
  =============================================================================*/
 void flashWinnerScore(uint8_t winner)
