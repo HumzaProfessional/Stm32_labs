@@ -34,8 +34,13 @@ void serve(void);  // Draws the current server's LED
 
 void updatePlayerScore(uint8_t score, uint8_t player);
 
+void flashWinnerScore(uint8_t winner);
+
+
 uint8_t getCurrentLedPattern(void);
 void setLedPattern(uint8_t pattern);
+
+
 
 
 #endif
