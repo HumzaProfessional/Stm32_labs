@@ -65,133 +65,63 @@ int main(void)
     serve();
 
     // Ensure the correct initial state of the user LED
-   if (led_mode == PLAY_MODE)
-{
-    // Edge detection for button release (debounced)
-    static uint8_t prevLeftBtn = 1;
-    static uint8_t prevRightBtn = 1;
-
-    uint8_t currLeftBtn = buttons[BTN_LEFT].state;
-    uint8_t currRightBtn = buttons[BTN_RIGHT].state;
-
-    uint8_t leftReleased = (prevLeftBtn == 0 && currLeftBtn == 1);
-    uint8_t rightReleased = (prevRightBtn == 0 && currRightBtn == 1);
-
-    switch (gameState)
+    if (led_mode == PLAY_MODE)
     {
-        case STATE_SERVE:
-            serve();
-            if ((currentServer == 1 && currLeftBtn == 0) ||
-                (currentServer == 0 && currRightBtn == 0)) {
-                if (ledPattern == 0x01)
-                    gameState = STATE_SHIFT_LEFT;
-                else if (ledPattern == 0x80)
-                    gameState = STATE_SHIFT_RIGHT;
-            }
-            break;
-
-        case STATE_SHIFT_LEFT:
-            if (!shiftLeft() && ledPattern == 0x80) {
-                gameState = STATE_RIGHT_HITZONE;
-                hitWaitTicks = 0;
-            }
-            break;
-
-        case STATE_SHIFT_RIGHT:
-            if (!shiftRight() && ledPattern == 0x01) {
-                gameState = STATE_LEFT_HITZONE;
-                hitWaitTicks = 0;
-            }
-            break;
-
-        case STATE_RIGHT_HITZONE:
-            hitWaitTicks++;
-            if (rightReleased && ledPattern == 0x80) {
-                gameState = STATE_RIGHT_HIT;
-            } else if (hitWaitTicks > 3) {
-                gameState = STATE_RIGHT_MISS;
-            }
-            break;
-
-        case STATE_LEFT_HITZONE:
-            hitWaitTicks++;
-            if (leftReleased && ledPattern == 0x01) {
-                gameState = STATE_LEFT_HIT;
-            } else if (hitWaitTicks > 3) {
-                gameState = STATE_LEFT_MISS;
-            }
-            break;
-
-        case STATE_RIGHT_HIT:
-            if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
-                currentSpeed -= SPEED_STEP;
-            configureSysTick(currentSpeed);
-            gameState = STATE_SHIFT_RIGHT;
-            break;
-
-        case STATE_LEFT_HIT:
-            if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
-                currentSpeed -= SPEED_STEP;
-            configureSysTick(currentSpeed);
-            gameState = STATE_SHIFT_LEFT;
-            break;
-
-        case STATE_RIGHT_MISS:
-            player1Score++;
-            updatePlayerScore(player1Score, 1);
-
-            if (player1Score >= 3) {
-                gameState = STATE_WIN;
-                break;
-            }
-
-            currentSpeed = INITIAL_SPEED;
-            configureSysTick(currentSpeed);
-            currentServer = 0;  // Player 2 missed → Player 1 serves
-            serve();
-            gameState = STATE_SERVE;
-            break;
-
-        case STATE_LEFT_MISS:
-            player2Score++;
-            updatePlayerScore(player2Score, 2);
-
-            if (player2Score >= 3) {
-                gameState = STATE_WIN;
-                break;
-            }
-
-            currentSpeed = INITIAL_SPEED;
-            configureSysTick(currentSpeed);
-            currentServer = 1;  // Player 1 missed → Player 2 serves
-            serve();
-            gameState = STATE_SERVE;
-            break;
-
-        case STATE_WIN:
-            if (player1Score >= 3) {
-                flashWinnerScore(1);
-            } else if (player2Score >= 3) {
-                flashWinnerScore(2);
-            }
-
-            player1Score = 0;
-            player2Score = 0;
-            updatePlayerScore(0, 1);
-            updatePlayerScore(0, 2);
-            currentSpeed = INITIAL_SPEED;
-            configureSysTick(currentSpeed);
-            currentServer = 1;
-            serve();
-            gameState = STATE_SERVE;
-            break;
+        GPIOA->ODR |= GPIO_ODR_OD5;   // Turn ON PA5
+    }
+    else
+    {
+        GPIOA->ODR &= ~GPIO_ODR_OD5;  // Turn OFF PA5
     }
 
-    prevLeftBtn = currLeftBtn;
-    prevRightBtn = currRightBtn;
-}
-}
+    uint8_t prevUserBtn = 1;
+    uint8_t currUserBtn;
 
+    while (1)
+    {
+        // Read user button from PC13
+        if (GPIOC->IDR & (1 << 13))
+            currUserBtn = 1;
+        else
+            currUserBtn = 0;
+
+        // Detect release (rising edge)
+        // Inside rising edge detection:
+    if (prevUserBtn == 0 && currUserBtn == 1)
+{
+    if (led_mode == PLAY_MODE)
+    {
+        led_mode = FLASH_LED_MODE;
+
+        GPIOA->ODR &= ~GPIO_ODR_OD5;  // Turn OFF user LED
+
+        //
+        setLedPattern(0x01);
+
+        configureSysTick(FLASH_MODE_SPEED);
+    }
+        else
+    {
+        led_mode = PLAY_MODE;
+        GPIOA->ODR |= GPIO_ODR_OD5;
+        configureSysTick(currentSpeed);
+    }
+
+        // Optional: Clear playfield LEDs
+        GPIOC->ODR &= ~(0xFF << 5);
+    }
+
+
+        prevUserBtn = currUserBtn;
+
+        // Run FLASH mode logic if active
+        if (led_mode == FLASH_LED_MODE)
+        {
+
+            handleFlashLedMode();
+        }
+    }
+}
 /**
  * @brief Configures the SysTick timer for the game speed.
  * @param reloadValue The reload value determining the speed in ticks.
@@ -289,7 +219,7 @@ void SysTick_Handler(void)
                 if (player1Score >= 3) {
                  gameState = STATE_WIN;
                   break;
-                }    
+                }
                 configureSysTick(currentSpeed);
                 gameState = STATE_SHIFT_LEFT;
                 break;
@@ -297,8 +227,8 @@ void SysTick_Handler(void)
            case STATE_RIGHT_MISS:
             player1Score++;
             updatePlayerScore(player1Score, 1);
-    
-            if (player1Score >= 3) {  // 
+
+            if (player1Score >= 3) {  //
           gameState = STATE_WIN;
          break;
     }
@@ -314,7 +244,7 @@ void SysTick_Handler(void)
     player2Score++;
     updatePlayerScore(player2Score, 2);
 
-    if (player2Score >= 3) {  // 
+    if (player2Score >= 3) {  //
         gameState = STATE_WIN;
         break;
     }
@@ -382,4 +312,3 @@ void handleFlashLedMode(void)
     prevLeftBtn = currLeftBtn;
     prevRightBtn = currRightBtn;
 }
-
