@@ -160,121 +160,131 @@ void SysTick_Handler(void)
 
     // === PLAY_MODE State Machine ===
     if (led_mode == PLAY_MODE)
+{
+    // Edge detection for button release (debounced)
+    static uint8_t prevLeftBtn = 1;
+    static uint8_t prevRightBtn = 1;
+
+    uint8_t currLeftBtn = buttons[BTN_LEFT].state;
+    uint8_t currRightBtn = buttons[BTN_RIGHT].state;
+
+    uint8_t leftReleased = (prevLeftBtn == 0 && currLeftBtn == 1);
+    uint8_t rightReleased = (prevRightBtn == 0 && currRightBtn == 1);
+
+    switch (gameState)
     {
-        switch (gameState)
-        {
-            case STATE_SERVE:
-                serve();
-                if ((currentServer == 1 && buttons[BTN_LEFT].state == 0) ||
-                    (currentServer == 0 && buttons[BTN_RIGHT].state == 0)) {
-                    if (ledPattern == 0x01)
-                        gameState = STATE_SHIFT_LEFT;
-                    else if (ledPattern == 0x80)
-                        gameState = STATE_SHIFT_RIGHT;
-                }
-                break;
+        case STATE_SERVE:
+            serve();
+            if ((currentServer == 1 && currLeftBtn == 0) ||
+                (currentServer == 0 && currRightBtn == 0)) {
+                if (ledPattern == 0x01)
+                    gameState = STATE_SHIFT_LEFT;
+                else if (ledPattern == 0x80)
+                    gameState = STATE_SHIFT_RIGHT;
+            }
+            break;
 
-            case STATE_SHIFT_LEFT:
-                if (!shiftLeft() && ledPattern == 0x80) {
-                    gameState = STATE_RIGHT_HITZONE;
-                    hitWaitTicks = 0;
-                }
-                break;
+        case STATE_SHIFT_LEFT:
+            if (!shiftLeft() && ledPattern == 0x80) {
+                gameState = STATE_RIGHT_HITZONE;
+                hitWaitTicks = 0;
+            }
+            break;
 
-            case STATE_SHIFT_RIGHT:
-                if (!shiftRight() && ledPattern == 0x01) {
-                    gameState = STATE_LEFT_HITZONE;
-                    hitWaitTicks = 0;
-                }
-                break;
+        case STATE_SHIFT_RIGHT:
+            if (!shiftRight() && ledPattern == 0x01) {
+                gameState = STATE_LEFT_HITZONE;
+                hitWaitTicks = 0;
+            }
+            break;
 
-            case STATE_RIGHT_HITZONE:
-                hitWaitTicks++;
-                if (buttons[BTN_RIGHT].state == 0) {
-                    gameState = STATE_RIGHT_HIT;
-                } else if (hitWaitTicks > 3) {
-                    gameState = STATE_RIGHT_MISS;
-                }
-                break;
+        case STATE_RIGHT_HITZONE:
+            hitWaitTicks++;
+            if (rightReleased && ledPattern == 0x80) {
+                gameState = STATE_RIGHT_HIT;
+            } else if (hitWaitTicks > 3) {
+                gameState = STATE_RIGHT_MISS;
+            }
+            break;
 
-            case STATE_LEFT_HITZONE:
-                hitWaitTicks++;
-                if (buttons[BTN_LEFT].state == 0) {
-                    gameState = STATE_LEFT_HIT;
-                } else if (hitWaitTicks > 3) {
-                    gameState = STATE_LEFT_MISS;
-                }
-                break;
+        case STATE_LEFT_HITZONE:
+            hitWaitTicks++;
+            if (leftReleased && ledPattern == 0x01) {
+                gameState = STATE_LEFT_HIT;
+            } else if (hitWaitTicks > 3) {
+                gameState = STATE_LEFT_MISS;
+            }
+            break;
 
-            case STATE_RIGHT_HIT:
-                if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
-                    currentSpeed -= SPEED_STEP;
-                configureSysTick(currentSpeed);
-                gameState = STATE_SHIFT_RIGHT;
-                break;
+        case STATE_RIGHT_HIT:
+            if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
+                currentSpeed -= SPEED_STEP;
+            configureSysTick(currentSpeed);
+            gameState = STATE_SHIFT_RIGHT;
+            break;
 
-            case STATE_LEFT_HIT:
-                if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
-                    currentSpeed -= SPEED_STEP;
-                if (player1Score >= 3) {
-                 gameState = STATE_WIN;
-                  break;
-                }
-                configureSysTick(currentSpeed);
-                gameState = STATE_SHIFT_LEFT;
-                break;
+        case STATE_LEFT_HIT:
+            if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
+                currentSpeed -= SPEED_STEP;
+            configureSysTick(currentSpeed);
+            gameState = STATE_SHIFT_LEFT;
+            break;
 
-           case STATE_RIGHT_MISS:
+        case STATE_RIGHT_MISS:
             player1Score++;
             updatePlayerScore(player1Score, 1);
 
-            if (player1Score >= 3) {  //
-          gameState = STATE_WIN;
-         break;
-    }
-
-        currentSpeed = INITIAL_SPEED;
-        configureSysTick(currentSpeed);
-        currentServer = 0;  // Player 2 missed → Player 1 serves
-       serve();
-      gameState = STATE_SERVE;
-        break;
-
-    case STATE_LEFT_MISS:
-    player2Score++;
-    updatePlayerScore(player2Score, 2);
-
-    if (player2Score >= 3) {  //
-        gameState = STATE_WIN;
-        break;
-    }
-
-    currentSpeed = INITIAL_SPEED;
-    configureSysTick(currentSpeed);
-    currentServer = 1;  // Player 1 missed → Player 2 serves
-    serve();
-    gameState = STATE_SERVE;
-    break;
-
-            case STATE_WIN:
-                if (player1Score >= 3) {
-                    flashWinnerScore(1);
-            } else if (player2Score >= 3) {
-                    flashWinnerScore(2);
+            if (player1Score >= 3) {
+                gameState = STATE_WIN;
+                break;
             }
-                player1Score = 0;
-                player2Score = 0;
-                updatePlayerScore(0, 1);
-               updatePlayerScore(0, 2);
+
             currentSpeed = INITIAL_SPEED;
             configureSysTick(currentSpeed);
-            currentServer = 1; // or 0, depending on your preference
+            currentServer = 0;  // Player 2 missed → Player 1 serves
             serve();
-             gameState = STATE_SERVE;
+            gameState = STATE_SERVE;
             break;
 
-        }
+        case STATE_LEFT_MISS:
+            player2Score++;
+            updatePlayerScore(player2Score, 2);
+
+            if (player2Score >= 3) {
+                gameState = STATE_WIN;
+                break;
+            }
+
+            currentSpeed = INITIAL_SPEED;
+            configureSysTick(currentSpeed);
+            currentServer = 1;  // Player 1 missed → Player 2 serves
+            serve();
+            gameState = STATE_SERVE;
+            break;
+
+        case STATE_WIN:
+            if (player1Score >= 3) {
+                flashWinnerScore(1);
+            } else if (player2Score >= 3) {
+                flashWinnerScore(2);
+            }
+
+            player1Score = 0;
+            player2Score = 0;
+            updatePlayerScore(0, 1);
+            updatePlayerScore(0, 2);
+            currentSpeed = INITIAL_SPEED;
+            configureSysTick(currentSpeed);
+            currentServer = 1;
+            serve();
+            gameState = STATE_SERVE;
+            break;
     }
+
+    prevLeftBtn = currLeftBtn;
+    prevRightBtn = currRightBtn;
+}
+
 }
 
 /**
