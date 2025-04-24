@@ -43,18 +43,17 @@ void init_LEDs_PC5to12(void)
     }
 
     // --- Player 1 Score: PC14, PC15, PH0 ---
-   GPIOB->MODER &= ~(3UL << (8 * 2));
-  GPIOB->MODER |=  (1UL << (8 * 2));
-  GPIOB->OTYPER &= ~(1UL << 8);
-  GPIOB->OSPEEDR &= ~(3UL << (8 * 2));
-  GPIOB->PUPDR &= ~(3UL << (8 * 2));
+    GPIOB->MODER &= ~(3UL << (8 * 2));
+    GPIOB->MODER |=  (1UL << (8 * 2));
+    GPIOB->OTYPER &= ~(1UL << 8);
+    GPIOB->OSPEEDR &= ~(3UL << (8 * 2));
+    GPIOB->PUPDR &= ~(3UL << (8 * 2));
 
-  GPIOB->MODER &= ~(3UL << (9 * 2));
-  GPIOB->MODER |=  (1UL << (9 * 2));
-  GPIOB->OTYPER &= ~(1UL << 9);
-  GPIOB->OSPEEDR &= ~(3UL << (9 * 2));
-  GPIOB->PUPDR &= ~(3UL << (9 * 2));
-
+    GPIOB->MODER &= ~(3UL << (9 * 2));
+    GPIOB->MODER |=  (1UL << (9 * 2));
+    GPIOB->OTYPER &= ~(1UL << 9);
+    GPIOB->OSPEEDR &= ~(3UL << (9 * 2));
+    GPIOB->PUPDR &= ~(3UL << (9 * 2));
 
     GPIOH->MODER &= ~(3UL << (0 * 2));
     GPIOH->MODER |=  (1UL << (0 * 2));
@@ -81,12 +80,13 @@ void init_LEDs_PC5to12(void)
     GPIOC->OSPEEDR &= ~(3UL << (3 * 2));
     GPIOC->PUPDR   &= ~(3UL << (3 * 2));
 
- //----Configure user LED on Nucleo-L476RG board (LD2 -> Port A, bit 5)-------------------------
- GPIOA->MODER = (GPIOA->MODER & ~GPIO_MODER_MODE5)| GPIO_MODER_MODE5_0; // output pin (PA5=01)
-GPIOA->OTYPER &= ~(GPIO_OTYPER_OT5); // push-pull (PA5=0)
- GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED5); // low speed (PA5=00)
- GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD5
-  }
+    // ----Configure user LED on Nucleo-L476RG board (LD2 -> Port A, bit 5)-------------------------
+    GPIOA->MODER = (GPIOA->MODER & ~GPIO_MODER_MODE5) | GPIO_MODER_MODE5_0; // output pin (PA5=01)
+    GPIOA->OTYPER &= ~(GPIO_OTYPER_OT5); // push-pull (PA5=0)
+    GPIOA->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEED5); // low speed (PA5=00)
+    GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD5); // <-- FIXED MISSING SEMICOLON
+}
+
 /*=============================================================================
  * update_LEDs_PC5to12()
    @paramter: None
@@ -146,15 +146,13 @@ void serve(void)
 void updatePlayerScore(uint8_t score, uint8_t player)
 {
     if (player == 1) {
-    // Player 1 Score LEDs: PB8, PB9, PH0
-    GPIOB->ODR &= ~((1 << 8) | (1 << 9));
-    GPIOH->ODR &= ~(1 << 0);
+        // Player 1 Score LEDs: PB8, PB9, PH0
+        GPIOB->ODR &= ~((1 << 8) | (1 << 9));
+        GPIOH->ODR &= ~(1 << 0);
 
-    if (score >= 1) GPIOB->ODR |= (1 << 8);
-    if (score >= 2) GPIOB->ODR |= (1 << 9);
-    if (score >= 3) GPIOH->ODR |= (1 << 0);
-      }
-
+        if (score >= 1) GPIOB->ODR |= (1 << 8);
+        if (score >= 2) GPIOB->ODR |= (1 << 9);
+        if (score >= 3) GPIOH->ODR |= (1 << 0);
     }
     else if (player == 2) {
         // Player 2: PH1, PC2, PC3
@@ -168,7 +166,7 @@ void updatePlayerScore(uint8_t score, uint8_t player)
 }
 
 /*=============================================================================
- * updatePlayerScore()
+ * flashWinnerScore()
   @Parameter: uint8_t winner
  * Lights up LEDs for the score of the specified player (1 or 2).
  =============================================================================*/
@@ -200,4 +198,5 @@ void setLedPattern(uint8_t pattern) {
     ledPattern = pattern;
     update_LEDs_PC5to12();
 }
+
 
