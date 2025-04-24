@@ -86,43 +86,38 @@ int main(void)
             currUserBtn = 0;
 
         // Detect release (rising edge)
-        if (prevUserBtn == 0 && currUserBtn == 1)
-        {
-            if (led_mode == PLAY_MODE)
-            {
-                led_mode = FLASH_LED_MODE;
+        // Inside rising edge detection:
+    if (prevUserBtn == 0 && currUserBtn == 1)
+{
+    if (led_mode == PLAY_MODE)
+    {
+        led_mode = FLASH_LED_MODE;
 
-                // Turn OFF user LED
-                GPIOA->ODR &= ~GPIO_ODR_OD5;
+        GPIOA->ODR &= ~GPIO_ODR_OD5;  // Turn OFF user LED
 
-                // Reset LED pattern to 0x01
-                setLedPattern(0x01);
+        // 
+        setLedPattern(0x01);
 
-                // Set a smooth constant SysTick rate for Flash Mode
-               configureSysTick(FLASH_MODE_SPEED);
-            }
-            else
-            {
-                led_mode = PLAY_MODE;
+        configureSysTick(FLASH_MODE_SPEED);
+    }
+        else
+    {
+        led_mode = PLAY_MODE;
+        GPIOA->ODR |= GPIO_ODR_OD5;
+        configureSysTick(currentSpeed);
+    }
 
-                // Turn ON user LED
-                GPIOA->ODR |= GPIO_ODR_OD5;
-
-                // Reconfigure SysTick to currentSpeed used for gameplay
-                configureSysTick(currentSpeed);
-            }
-
-            // Optional: Clear playfield LEDs
-            GPIOC->ODR &= ~(0xFF << 5);
-        }
+        // Optional: Clear playfield LEDs
+        GPIOC->ODR &= ~(0xFF << 5);
+    }
+    
 
         prevUserBtn = currUserBtn;
 
         // Run FLASH mode logic if active
         if (led_mode == FLASH_LED_MODE)
         {
-            // Reset LED pattern to 0x01
-            setLedPattern(0x01);
+    
             handleFlashLedMode();
         }
     }
