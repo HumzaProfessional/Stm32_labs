@@ -71,34 +71,40 @@ int main(void)
     uint8_t currUserBtn;
 
     while (1)
+{
+    // === Read user button from PC13 ===
+    if (GPIOC->IDR & (1 << 13))
+        currUserBtn = 1;
+    else
+        currUserBtn = 0;
+
+    // === Detect release (rising edge) ===
+    if (prevUserBtn == 0 && currUserBtn == 1)
     {
-        currUserBtn = (GPIOC->IDR & (1 << 13)) ? 1 : 0;
-
-        if (prevUserBtn == 0 && currUserBtn == 1)
+        if (led_mode == PLAY_MODE)
         {
-            if (led_mode == PLAY_MODE)
-            {
-                led_mode = FLASH_LED_MODE;
-                GPIOA->ODR &= ~GPIO_ODR_OD5;
-                setLedPattern(0x01);
-                configureSysTick(FLASH_MODE_SPEED);
-            }
-            else
-            {
-                led_mode = PLAY_MODE;
-                GPIOA->ODR |= GPIO_ODR_OD5;
-                configureSysTick(currentSpeed);
-            }
-            GPIOC->ODR &= ~(0xFF << 5);
+            led_mode = FLASH_LED_MODE;
+            GPIOA->ODR &= ~GPIO_ODR_OD5;  // Turn OFF user LED
+            setLedPattern(0x01);          // Initialize starting LED
+            configureSysTick(FLASH_MODE_SPEED);
+        }
+        else
+        {
+            led_mode = PLAY_MODE;
+            GPIOA->ODR |= GPIO_ODR_OD5;   // Turn ON user LED
+            configureSysTick(currentSpeed);
         }
 
-        prevUserBtn = currUserBtn;
+        // Optional: Clear playfield LEDs
+        GPIOC->ODR &= ~(0xFF << 5);
+    }
 
-        if (led_mode == FLASH_LED_MODE)
-        {
-            setLedPattern(0x01);
-            handleFlashLedMode();
-        }
+    prevUserBtn = currUserBtn;
+
+    // === Handle Flash Mode input ===
+    if (led_mode == FLASH_LED_MODE)
+    {
+        handleFlashLedMode();
     }
 }
 
