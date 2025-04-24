@@ -5,7 +5,7 @@
 /**
  ******************************************
  * @file main.c
- * @brief  1D Pong game
+ * @brief Main program file for 1D Pong game
  * @author Humza Rana & Mac
  * @Lab: Final Project
  * @Class: CPE 3000
@@ -14,7 +14,7 @@
  *  PLAY_MODE and FLASH_LED_MODE.
  *  Two buttons are used to interact with the game and SysTick is
  *  used for regular timing.
- *  The user button toggles between modes. Debouncing is handled by Timer2 interupt.
+ *  The user button toggles between modes. Debouncing is handled by Timer 2.
  ******************************************
  */
 
@@ -30,10 +30,8 @@ typedef enum {
     STATE_SERVE,
     STATE_SHIFT_LEFT,
     STATE_SHIFT_RIGHT,
-    STATE_RIGHT_HITZONE,
     STATE_RIGHT_HIT,
     STATE_RIGHT_MISS,
-    STATE_LEFT_HITZONE,
     STATE_LEFT_HIT,
     STATE_LEFT_MISS,
     STATE_WIN
@@ -44,8 +42,8 @@ static PongState gameState = STATE_SERVE;
 static uint8_t player1Score = 0;
 static uint8_t player2Score = 0;
 uint32_t currentSpeed = INITIAL_SPEED;
-static int hitWaitTicks = 0;
 uint32_t msTimer = 0;
+
 
 void configureSysTick(uint32_t reloadValue);
 void configureTimer(void);
@@ -53,57 +51,58 @@ void TIM2_IRQHandler(void);
 void SysTick_Handler(void);
 void handleFlashLedMode(void);
 
-
 int main(void)
 {
+
     init_Buttons();
-    init_LEDs_PC5to12();
-    configureSysTick(currentSpeed);
-    configureTimer();
-    serve();
+     init_LEDs_PC5to12();
+        configureSysTick(currentSpeed);
+        configureTimer();
+        serve();
 
-    if (led_mode == PLAY_MODE)
-        GPIOA->ODR |= GPIO_ODR_OD5;
-    else
-        GPIOA->ODR &= ~GPIO_ODR_OD5;
+        if (led_mode == PLAY_MODE)
+            GPIOA->ODR |= GPIO_ODR_OD5;
+        else
+            GPIOA->ODR &= ~GPIO_ODR_OD5;
 
-    uint8_t prevUserBtn = 1;
-    uint8_t currUserBtn;
+        uint8_t prevUserBtn = 1;
+        uint8_t currUserBtn;
 
-    while (1)
-    {
-        currUserBtn = (GPIOC->IDR & (1 << 13)) ? 1 : 0;
-
-        if (prevUserBtn == 0 && currUserBtn == 1)
+        while (1)
         {
-            if (led_mode == PLAY_MODE)
-            {
-                led_mode = FLASH_LED_MODE;
-                GPIOA->ODR &= ~GPIO_ODR_OD5;
-                GPIOC->ODR &= ~(0xFF << 5);
-                setLedPattern(0x01);
-                configureSysTick(FLASH_MODE_SPEED);
-            }
-            else
-            {
-                led_mode = PLAY_MODE;
-                GPIOA->ODR |= GPIO_ODR_OD5;
-                configureSysTick(currentSpeed);
-            }
-        }
+            currUserBtn = (GPIOC->IDR & (1 << 13)) ? 1 : 0;
 
-        prevUserBtn = currUserBtn;
+            if (prevUserBtn == 0 && currUserBtn == 1)
+            {
+                if (led_mode == PLAY_MODE)
+                {
+                    led_mode = FLASH_LED_MODE;
+                    GPIOA->ODR &= ~GPIO_ODR_OD5;
+                    GPIOC->ODR &= ~(0xFF << 5);
+                    setLedPattern(0x01);
+                    configureSysTick(FLASH_MODE_SPEED);
+                }
+                else
+                {
+                    led_mode = PLAY_MODE;
+                    GPIOA->ODR |= GPIO_ODR_OD5;
+                    configureSysTick(currentSpeed);
+                }
+            }
 
-        if (led_mode == FLASH_LED_MODE)
-        {
-            handleFlashLedMode();
+            prevUserBtn = currUserBtn;
+
+            if (led_mode == FLASH_LED_MODE)
+            {
+                handleFlashLedMode();
+            }
         }
     }
-}
 /**
- * @brief Configures the SysTick timer for the game speed.
- * @param reloadValue The reload value determining the speed in ticks.
+ *
+ * @parameter: reloadValue The reload value determining the speed in ticks.
  * @return None
+ *  Configures the SysTick timer for the game speed.
  */
 void configureSysTick(uint32_t reloadValue)
 {
@@ -122,7 +121,7 @@ void configureSysTick(uint32_t reloadValue)
 void configureTimer(void)
 {
     RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
-    TIM2->PSC = 3999;
+    TIM2->PSC = 2999;
     TIM2->ARR = 19;
     TIM2->DIER |= TIM_DIER_UIE;
     TIM2->CR1 |= TIM_CR1_CEN;
@@ -272,8 +271,6 @@ case STATE_SHIFT_RIGHT:
         }
     }
 }
-
-
 /**
  * @brief Handles logic for FLASH_LED_MODE
  * Only one LED is on at a time, and button presses shift it left or right.
