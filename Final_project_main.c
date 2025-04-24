@@ -230,29 +230,38 @@ void SysTick_Handler(void)
                 gameState = STATE_SHIFT_LEFT;
                 break;
 
-            case STATE_RIGHT_MISS:
-                player1Score++;
-                updatePlayerScore(player1Score, 1);
-                 if (player2Score >= 3) {
-                gameState = STATE_WIN;
-                break;
-                 }
-                currentSpeed = INITIAL_SPEED;
-                configureSysTick(currentSpeed);
-                currentServer = 0;
-                serve();
-                gameState = STATE_SERVE;
-                break;
+           case STATE_RIGHT_MISS:
+            player1Score++;
+            updatePlayerScore(player1Score, 1);
+    
+            if (player1Score >= 3) {  // 
+          gameState = STATE_WIN;
+         break;
+    }
 
-            case STATE_LEFT_MISS:
-                player2Score++;
-                updatePlayerScore(player2Score, 2);
-                currentSpeed = INITIAL_SPEED;
-                configureSysTick(currentSpeed);
-                currentServer = 1;
-                serve();
-                gameState = STATE_SERVE;
-                break;
+        currentSpeed = INITIAL_SPEED;
+        configureSysTick(currentSpeed);
+        currentServer = 0;  // Player 2 missed → Player 1 serves
+       serve();
+      gameState = STATE_SERVE;
+        break;
+
+    case STATE_LEFT_MISS:
+    player2Score++;
+    updatePlayerScore(player2Score, 2);
+
+    if (player2Score >= 3) {  // 
+        gameState = STATE_WIN;
+        break;
+    }
+
+    currentSpeed = INITIAL_SPEED;
+    configureSysTick(currentSpeed);
+    currentServer = 1;  // Player 1 missed → Player 2 serves
+    serve();
+    gameState = STATE_SERVE;
+    break;
+
             case STATE_WIN:
                 if (player1Score >= 3) {
                     flashWinnerScore(1);
