@@ -203,22 +203,35 @@ void SysTick_Handler(void)
                 break;
 
             case STATE_RIGHT_HITZONE:
-                hitWaitTicks++;
-                if (buttons[BTN_RIGHT].state == 0) {
-                    gameState = STATE_RIGHT_HIT;
-                } else if (hitWaitTicks > 3) {
-                    gameState = STATE_RIGHT_MISS;
-                }
-                break;
+            hitWaitTicks++;
+            if (buttons[BTN_RIGHT].state == 0)
+        {
+        if (ledPattern == 0x80)  // Only a hit if LED is at the far right
+            gameState = STATE_RIGHT_HIT;
+        else                     // If hit too early (wrong LED)
+            gameState = STATE_RIGHT_MISS;
+            }
+            else if (hitWaitTicks > 3)  // If no press in time
+        {
+        gameState = STATE_RIGHT_MISS;
+    }
+        break;
 
-            case STATE_LEFT_HITZONE:
-                hitWaitTicks++;
-                if (buttons[BTN_LEFT].state == 0) {
-                    gameState = STATE_LEFT_HIT;
-                } else if (hitWaitTicks > 3) {
-                    gameState = STATE_LEFT_MISS;
-                }
-                break;
+    case STATE_LEFT_HITZONE:
+        hitWaitTicks++;
+        if (buttons[BTN_LEFT].state == 0)
+        {
+        if (ledPattern == 0x01)  // Only a hit if LED is at the far left
+                gameState = STATE_LEFT_HIT;
+        else                     // If hit too early (wrong LED)
+            gameState = STATE_LEFT_MISS;
+    }
+    else if (hitWaitTicks > 3)  // If no press in time
+    {
+        gameState = STATE_LEFT_MISS;
+    }
+    break;
+
 
             case STATE_RIGHT_HIT:
                 if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
