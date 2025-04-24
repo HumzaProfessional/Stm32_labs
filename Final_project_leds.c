@@ -178,7 +178,7 @@ void updatePlayerScore(uint8_t score, uint8_t player)
  =============================================================================*/
 void flashWinnerScore(uint8_t winner)
 {
-    for (int i = 0; i < 6; i++)  // Flash 3 times
+    for (int i = 0; i < 18; i++)  // Flash 9 times
     {
         if (winner == 1)
         {
@@ -191,7 +191,7 @@ void flashWinnerScore(uint8_t winner)
             GPIOC->ODR ^= (1 << 2) | (1 << 3);   // Toggle PC2 & PC3
         }
 
-        for (volatile int d = 0; d < 500000; d++);  // Delay
+        for (volatile int d = 0; d < 50000; d++);  // Delay
     }
 }
 
@@ -204,5 +204,3 @@ void setLedPattern(uint8_t pattern) {
     ledPattern = pattern;
     update_LEDs_PC5to12();
 }
-
-
