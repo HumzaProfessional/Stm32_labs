@@ -5,7 +5,7 @@
 /**
  ******************************************
  * @file main.c
- * @brief Main program file for 1D Pong game
+ * @brief  1D Pong game
  * @author Humza Rana & Mac
  * @Lab: Final Project
  * @Class: CPE 3000
@@ -14,7 +14,7 @@
  *  PLAY_MODE and FLASH_LED_MODE.
  *  Two buttons are used to interact with the game and SysTick is
  *  used for regular timing.
- *  The user button toggles between modes. Debouncing is handled by Timer 2.
+ *  The user button toggles between modes. Debouncing is handled by Timer2 interupt.
  ******************************************
  */
 
