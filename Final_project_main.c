@@ -5,16 +5,16 @@
 /**
  ******************************************
  * @file main.c
- * @brief Main program logic for 1D Pong game
+ * @brief Main program file for 1D Pong game
  * @author Humza Rana & Mac
- * @Lab 4:
+ * @Lab: Finsl Project
  * @Class: CPE 3000
  * -----------------------------------------------------
  *  In this lab, pins are enabled to light LEDs in two modes:
  *  PLAY_MODE and FLASH_LED_MODE.
  *  Two buttons are used to interact with the game and SysTick is
  *  used for regular timing.
- *  A user button toggles between modes. Debouncing is used.
+ *  The user button toggles between modes. Debouncing is used.
  ******************************************
  */
 
@@ -36,7 +36,8 @@ typedef enum {
     STATE_RIGHT_MISS,
     STATE_LEFT_HITZONE,
     STATE_LEFT_HIT,
-    STATE_LEFT_MISS
+    STATE_LEFT_MISS,
+    STATE_WIN
 } PongState;
 
 // === Global Variables ===
@@ -221,6 +222,10 @@ void SysTick_Handler(void)
             case STATE_LEFT_HIT:
                 if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
                     currentSpeed -= SPEED_STEP;
+                if (player1Score >= 3) {
+                 gameState = STATE_WIN;
+                  break;
+                }    
                 configureSysTick(currentSpeed);
                 gameState = STATE_SHIFT_LEFT;
                 break;
@@ -228,6 +233,10 @@ void SysTick_Handler(void)
             case STATE_RIGHT_MISS:
                 player1Score++;
                 updatePlayerScore(player1Score, 1);
+                 if (player2Score >= 3) {
+                gameState = STATE_WIN;
+                break;
+                 }
                 currentSpeed = INITIAL_SPEED;
                 configureSysTick(currentSpeed);
                 currentServer = 0;
@@ -244,6 +253,23 @@ void SysTick_Handler(void)
                 serve();
                 gameState = STATE_SERVE;
                 break;
+            case STATE_WIN:
+                if (player1Score >= 3) {
+                    flashWinnerScore(1);
+            } else if (player2Score >= 3) {
+                    flashWinnerScore(2);
+            }
+                player1Score = 0;
+                player2Score = 0;
+                updatePlayerScore(0, 1);
+               updatePlayerScore(0, 2);
+            currentSpeed = INITIAL_SPEED;
+            configureSysTick(currentSpeed);
+            currentServer = 1; // or 0, depending on your preference
+            serve();
+             gameState = STATE_SERVE;
+            break;
+
         }
     }
 }
