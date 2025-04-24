@@ -189,35 +189,35 @@ void SysTick_Handler(void)
                 }
                 break;
 
-            case STATE_SHIFT_LEFT:
-                // Player 2 hit attempt (BTN_RIGHT)
-                if (buttons[BTN_RIGHT].state == 0)
-                {
-                    if (ledPattern == 0x80)
-                        gameState = STATE_RIGHT_HIT;
-                    else
-                        gameState = STATE_RIGHT_MISS;
-                }
-                else if (!shiftLeft())
-                {
-                    gameState = STATE_RIGHT_MISS;
-                }
-                break;
+           case STATE_SHIFT_LEFT:
+    if (buttons[BTN_RIGHT].state == 0)
+    {
+        if (ledPattern == 0x80)
+            gameState = STATE_RIGHT_HIT;
+        else if (ledPattern == 0x40)
+            gameState = STATE_RIGHT_MISS;
+        // Other values are ignored
+    }
+    else if (!shiftLeft())
+    {
+        gameState = STATE_RIGHT_MISS;
+    }
+    break;
 
-            case STATE_SHIFT_RIGHT:
-                // Player 1 hit attempt (BTN_LEFT)
-                if (buttons[BTN_LEFT].state == 0)
-                {
-                    if (ledPattern == 0x01)
-                        gameState = STATE_LEFT_HIT;
-                    else
-                        gameState = STATE_LEFT_MISS;
-                }
-                else if (!shiftRight())
-                {
-                    gameState = STATE_LEFT_MISS;
-                }
-                break;
+case STATE_SHIFT_RIGHT:
+    if (buttons[BTN_LEFT].state == 0)
+    {
+        if (ledPattern == 0x01)
+            gameState = STATE_LEFT_HIT;
+        else if (ledPattern == 0x02)
+            gameState = STATE_LEFT_MISS;
+        // Other values are ignored
+    }
+    else if (!shiftRight())
+    {
+        gameState = STATE_LEFT_MISS;
+    }
+    break;
 
             case STATE_RIGHT_HIT:
                 if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
