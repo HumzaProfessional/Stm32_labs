@@ -159,24 +159,14 @@ void SysTick_Handler(void)
     }
 
     // === PLAY_MODE State Machine ===
-    if (led_mode == PLAY_MODE)
+   if (led_mode == PLAY_MODE)
 {
-    // Edge detection for button release (debounced)
-    static uint8_t prevLeftBtn = 1;
-    static uint8_t prevRightBtn = 1;
-
-    uint8_t currLeftBtn = buttons[BTN_LEFT].state;
-    uint8_t currRightBtn = buttons[BTN_RIGHT].state;
-
-    uint8_t leftReleased = (prevLeftBtn == 0 && currLeftBtn == 1);
-    uint8_t rightReleased = (prevRightBtn == 0 && currRightBtn == 1);
-
     switch (gameState)
     {
         case STATE_SERVE:
             serve();
-            if ((currentServer == 1 && currLeftBtn == 0) ||
-                (currentServer == 0 && currRightBtn == 0)) {
+            if ((currentServer == 1 && buttons[BTN_LEFT].state == 0) ||
+                (currentServer == 0 && buttons[BTN_RIGHT].state == 0)) {
                 if (ledPattern == 0x01)
                     gameState = STATE_SHIFT_LEFT;
                 else if (ledPattern == 0x80)
@@ -200,7 +190,7 @@ void SysTick_Handler(void)
 
         case STATE_RIGHT_HITZONE:
             hitWaitTicks++;
-            if (rightReleased && ledPattern == 0x80) {
+            if (buttons[BTN_RIGHT].state == 0 && ledPattern == 0x80) {
                 gameState = STATE_RIGHT_HIT;
             } else if (hitWaitTicks > 3) {
                 gameState = STATE_RIGHT_MISS;
@@ -209,7 +199,7 @@ void SysTick_Handler(void)
 
         case STATE_LEFT_HITZONE:
             hitWaitTicks++;
-            if (leftReleased && ledPattern == 0x01) {
+            if (buttons[BTN_LEFT].state == 0 && ledPattern == 0x01) {
                 gameState = STATE_LEFT_HIT;
             } else if (hitWaitTicks > 3) {
                 gameState = STATE_LEFT_MISS;
@@ -241,7 +231,7 @@ void SysTick_Handler(void)
 
             currentSpeed = INITIAL_SPEED;
             configureSysTick(currentSpeed);
-            currentServer = 0;  // Player 2 missed → Player 1 serves
+            currentServer = 0;
             serve();
             gameState = STATE_SERVE;
             break;
@@ -257,7 +247,7 @@ void SysTick_Handler(void)
 
             currentSpeed = INITIAL_SPEED;
             configureSysTick(currentSpeed);
-            currentServer = 1;  // Player 1 missed → Player 2 serves
+            currentServer = 1;
             serve();
             gameState = STATE_SERVE;
             break;
@@ -280,12 +270,8 @@ void SysTick_Handler(void)
             gameState = STATE_SERVE;
             break;
     }
-
-    prevLeftBtn = currLeftBtn;
-    prevRightBtn = currRightBtn;
 }
 
-}
 
 /**
  * @brief Handles logic for FLASH_LED_MODE
