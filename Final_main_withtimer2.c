@@ -5,7 +5,7 @@
 /**
  ******************************************
  * @file main.c
- * @brief Main program file for 1D Pong game
+ * @brief 1D Pong game main file
  * @author Humza Rana & Mac
  * @Lab: Final Project
  * @Class: CPE 3000
@@ -14,7 +14,10 @@
  *  PLAY_MODE and FLASH_LED_MODE.
  *  Two buttons are used to interact with the game and SysTick is
  *  used for regular timing.
- *  The user button toggles between modes. Debouncing is handled by Timer 2.
+    In PLAY_MODE, a pong game is emulated using a led array.
+    The farthest left and right leds(blue and red) are the "paddles".
+ *  The user button toggles between modes. 
+ *   Debouncing is handled by Timer2 interupt.
  ******************************************
  */
 
@@ -44,60 +47,90 @@ static uint8_t player2Score = 0;
 uint32_t currentSpeed = INITIAL_SPEED;
 uint32_t msTimer = 0;
 
-
+// Function prototypes
 void configureSysTick(uint32_t reloadValue);
 void configureTimer(void);
 void TIM2_IRQHandler(void);
 void SysTick_Handler(void);
 void handleFlashLedMode(void);
 
+/////////////////////////////////////////////
+//main function
+//////////////////////////////////////////////
 int main(void)
 {
-
+    // Initialize buttons and LEDs
     init_Buttons();
-     init_LEDs_PC5to12();
-        configureSysTick(currentSpeed);
-        configureTimer();
-        serve();
+    init_LEDs_PC5to12();
 
-        if (led_mode == PLAY_MODE)
-            GPIOA->ODR |= GPIO_ODR_OD5;
+    // Configure system timers
+    configureSysTick(currentSpeed);  // Start SysTick for gameplay speed
+    configureTimer();                // Timer2 handles button debouncing
+
+    // Set initial serve state
+    serve();
+
+    // Set user LED (PA5) depending on initial mode
+    if (led_mode == PLAY_MODE)
+        GPIOA->ODR |= GPIO_ODR_OD5;   // Turn ON user LED for play mode
+    else
+        GPIOA->ODR &= ~GPIO_ODR_OD5;  // Turn OFF for flash mode
+
+    // Variables to track user button state for rising edge detection
+    uint8_t prevUserBtn = 1;
+    uint8_t currUserBtn;
+
+    while (1)
+    {
+        // Read current user button state (PC13)
+        if ((GPIOC->IDR & (1 << 13)) != 0)
+            currUserBtn = 1;
         else
-            GPIOA->ODR &= ~GPIO_ODR_OD5;
+            currUserBtn = 0;
 
-        uint8_t prevUserBtn = 1;
-        uint8_t currUserBtn;
-
-        while (1)
+        // Check for rising edge (button release)
+        if (prevUserBtn == 0 && currUserBtn == 1)
         {
-            currUserBtn = (GPIOC->IDR & (1 << 13)) ? 1 : 0;
-
-            if (prevUserBtn == 0 && currUserBtn == 1)
+            // Toggle between PLAY_MODE and FLASH_LED_MODE
+            if (led_mode == PLAY_MODE)
             {
-                if (led_mode == PLAY_MODE)
-                {
-                    led_mode = FLASH_LED_MODE;
-                    GPIOA->ODR &= ~GPIO_ODR_OD5;
-                    GPIOC->ODR &= ~(0xFF << 5);
-                    setLedPattern(0x01);
-                    configureSysTick(FLASH_MODE_SPEED);
-                }
-                else
-                {
-                    led_mode = PLAY_MODE;
-                    GPIOA->ODR |= GPIO_ODR_OD5;
-                    configureSysTick(currentSpeed);
-                }
+                led_mode = FLASH_LED_MODE;
+
+                // Indicate mode change by turning OFF user LED
+                GPIOA->ODR &= ~GPIO_ODR_OD5;
+
+                // Clear all playfield LEDs
+                GPIOC->ODR &= ~(0xFF << 5);
+
+                // Start flash mode from leftmost LED
+                setLedPattern(0x01);
+
+                // Set smooth, fast SysTick speed for flash mode
+                configureSysTick(FLASH_MODE_SPEED);
             }
-
-            prevUserBtn = currUserBtn;
-
-            if (led_mode == FLASH_LED_MODE)
+            else
             {
-                handleFlashLedMode();
+                led_mode = PLAY_MODE;
+
+                // Turn ON user LED to indicate play mode
+                GPIOA->ODR |= GPIO_ODR_OD5;
+
+                // Restore normal game tick speed
+                configureSysTick(currentSpeed);
             }
         }
+
+        // Store current state for next comparison
+        prevUserBtn = currUserBtn;
+
+        // Handle LED shifting logic in FLASH_LED_MODE
+        if (led_mode == FLASH_LED_MODE)
+        {
+            handleFlashLedMode();
+        }
     }
+}
+
 /**
  *
  * @parameter: reloadValue The reload value determining the speed in ticks.
@@ -128,11 +161,12 @@ void configureTimer(void)
     NVIC_EnableIRQ(TIM2_IRQn);
 }
 
-/**
- * @brief Timer 2 interrupt handler for debouncing.
+/********************************************************
+ * TIM2_IRQHandler(void)
  * @param None
  * @return None
- */
+ * Timer 2 interrupt handles button debouncing.
+ ******************************************************/
 void TIM2_IRQHandler(void)
 {
     if (TIM2->SR & TIM_SR_UIF)
