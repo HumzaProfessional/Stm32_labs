@@ -180,7 +180,8 @@ void SysTick_Handler(void)
             case STATE_SERVE:
                 serve();
                 if ((currentServer == 1 && buttons[BTN_LEFT].state == 0) ||
-                    (currentServer == 0 && buttons[BTN_RIGHT].state == 0)) {
+                    (currentServer == 0 && buttons[BTN_RIGHT].state == 0))
+                {
                     if (ledPattern == 0x01)
                         gameState = STATE_SHIFT_LEFT;
                     else if (ledPattern == 0x80)
@@ -189,49 +190,34 @@ void SysTick_Handler(void)
                 break;
 
             case STATE_SHIFT_LEFT:
-                if (!shiftLeft() && ledPattern == 0x80) {
-                    gameState = STATE_RIGHT_HITZONE;
-                    hitWaitTicks = 0;
+                // Player 2 hit attempt (BTN_RIGHT)
+                if (buttons[BTN_RIGHT].state == 0)
+                {
+                    if (ledPattern == 0x80)
+                        gameState = STATE_RIGHT_HIT;
+                    else
+                        gameState = STATE_RIGHT_MISS;
+                }
+                else if (!shiftLeft())
+                {
+                    gameState = STATE_RIGHT_MISS;
                 }
                 break;
 
             case STATE_SHIFT_RIGHT:
-                if (!shiftRight() && ledPattern == 0x01) {
-                    gameState = STATE_LEFT_HITZONE;
-                    hitWaitTicks = 0;
+                // Player 1 hit attempt (BTN_LEFT)
+                if (buttons[BTN_LEFT].state == 0)
+                {
+                    if (ledPattern == 0x01)
+                        gameState = STATE_LEFT_HIT;
+                    else
+                        gameState = STATE_LEFT_MISS;
+                }
+                else if (!shiftRight())
+                {
+                    gameState = STATE_LEFT_MISS;
                 }
                 break;
-
-            case STATE_RIGHT_HITZONE:
-            hitWaitTicks++;
-            if (buttons[BTN_RIGHT].state == 0)
-        {
-        if (ledPattern == 0x80)  // Only a hit if LED is at the far right
-            gameState = STATE_RIGHT_HIT;
-        else                     // If hit too early (wrong LED)
-            gameState = STATE_RIGHT_MISS;
-            }
-            else if (hitWaitTicks > 3)  // If no press in time
-        {
-        gameState = STATE_RIGHT_MISS;
-    }
-        break;
-
-    case STATE_LEFT_HITZONE:
-        hitWaitTicks++;
-        if (buttons[BTN_LEFT].state == 0)
-        {
-        if (ledPattern == 0x01)  // Only a hit if LED is at the far left
-                gameState = STATE_LEFT_HIT;
-        else                     // If hit too early (wrong LED)
-            gameState = STATE_LEFT_MISS;
-    }
-    else if (hitWaitTicks > 3)  // If no press in time
-    {
-        gameState = STATE_LEFT_MISS;
-    }
-    break;
-
 
             case STATE_RIGHT_HIT:
                 if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
@@ -294,6 +280,7 @@ void SysTick_Handler(void)
         }
     }
 }
+
 
 /**
  * @brief Handles logic for FLASH_LED_MODE
