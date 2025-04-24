@@ -41,6 +41,3 @@ uint8_t getCurrentLedPattern(void);
 void setLedPattern(uint8_t pattern);
 
 #endif
-
-
-#endif
