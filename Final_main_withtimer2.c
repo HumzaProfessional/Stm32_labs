@@ -23,9 +23,9 @@
 
 // === Configuration ===
 #define SYS_CLK_FREQ       4000000
-#define MAX_SPEED_TICKS    100000
-#define SPEED_STEP         100000
-#define INITIAL_SPEED      400000
+#define MAX_SPEED_TICKS    100000 // Fastest game speed
+#define SPEED_STEP         100000 // speed increment
+#define INITIAL_SPEED      600000
 #define FLASH_MODE_SPEED   20000  // ~5ms tick = 200Hz (4MHz / 20000)
 
 // === Game States for PLAY_MODE ===
