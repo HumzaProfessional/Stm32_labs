@@ -24,6 +24,8 @@
 #define SPEED_STEP         100000
 #define INITIAL_SPEED      400000
 
+#define FLASH_MODE_SPEED 20000  // ~5ms tick = 200Hz (4MHz / 20000)
+
 // === Game States for PLAY_MODE ===
 typedef enum {
     STATE_SERVE,
@@ -96,7 +98,7 @@ int main(void)
                 setLedPattern(0x01);
 
                 // Set a smooth constant SysTick rate for Flash Mode
-                configureSysTick(INITIAL_SPEED);
+               configureSysTick(FLASH_MODE_SPEED);
             }
             else
             {
@@ -118,6 +120,8 @@ int main(void)
         // Run FLASH mode logic if active
         if (led_mode == FLASH_LED_MODE)
         {
+            // Reset LED pattern to 0x01
+            setLedPattern(0x01);
             handleFlashLedMode();
         }
     }
