@@ -47,6 +47,13 @@ uint32_t currentSpeed = INITIAL_SPEED;
 static int hitWaitTicks = 0;
 uint32_t msTimer = 0;
 
+void configureSysTick(uint32_t reloadValue);
+void configureTimer(void);
+void TIM2_IRQHandler(void);
+void SysTick_Handler(void);
+void handleFlashLedMode(void);
+
+
 int main(void)
 {
     init_Buttons();
