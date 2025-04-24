@@ -21,6 +21,8 @@ volatile uint8_t currentServer = 1;  // 1 = Player 1, 0 = Player 2
 
 /*=============================================================================
  * init_LEDs_PC5to12()
+   @paramters: None
+   @return: None
  * Configures the GPIO pins for the 8 playfield LEDs (PC5–PC12)
  * and the score LEDs for both players.
  =============================================================================*/
@@ -87,6 +89,8 @@ GPIOA->OTYPER &= ~(GPIO_OTYPER_OT5); // push-pull (PA5=0)
   }
 /*=============================================================================
  * update_LEDs_PC5to12()
+   @paramter: None
+   @return: None
  * Updates the playfield LEDs using the current ledPattern.
  =============================================================================*/
 void update_LEDs_PC5to12(void)
@@ -135,7 +139,9 @@ void serve(void)
 
 /*=============================================================================
  * updatePlayerScore()
- * Lights up LEDs for the score of the specified player (1 or 2).
+   @parameter: uint8_t score, uint8_t player
+   @return: None
+ * Flash LEDs for the score of the player that won 3 matches.
  =============================================================================*/
 void updatePlayerScore(uint8_t score, uint8_t player)
 {
@@ -160,6 +166,31 @@ void updatePlayerScore(uint8_t score, uint8_t player)
         if (score >= 3) GPIOC->ODR |= (1 << 3);
     }
 }
+
+/*=============================================================================
+ * updatePlayerScore()
+  @Parameter: uint8_t winner
+ * Lights up LEDs for the score of the specified player (1 or 2).
+ =============================================================================*/
+void flashWinnerScore(uint8_t winner)
+{
+    for (int i = 0; i < 6; i++)  // Flash 3 times
+    {
+        if (winner == 1)
+        {
+            GPIOB->ODR ^= (1 << 8) | (1 << 9);  // Toggle PB8 & PB9
+            GPIOH->ODR ^= (1 << 0);             // Toggle PH0
+        }
+        else if (winner == 2)
+        {
+            GPIOH->ODR ^= (1 << 1);             // Toggle PH1
+            GPIOC->ODR ^= (1 << 2) | (1 << 3);   // Toggle PC2 & PC3
+        }
+
+        for (volatile int d = 0; d < 500000; d++);  // Delay
+    }
+}
+
 
 uint8_t getCurrentLedPattern(void) {
     return ledPattern;
