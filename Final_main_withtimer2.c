@@ -54,9 +54,11 @@ void TIM2_IRQHandler(void);
 void SysTick_Handler(void);
 void handleFlashLedMode(void);
 
-/////////////////////////////////////////////
+/******************************************
 //main function
-//////////////////////////////////////////////
+// Handles Initialization of pins and state machine.
+// Also handles mode swtiching. 
+*******************************************/
 int main(void)
 {
     // Initialize buttons and LEDs
@@ -131,12 +133,12 @@ int main(void)
     }
 }
 
-/**
- *
- * @parameter: reloadValue The reload value determining the speed in ticks.
+/*****************************************************************************
+ * configureSysTick()
+ * @parameter: reloadValue - The reload value determining the speed ticks.
  * @return None
- *  Configures the SysTick timer for the game speed.
- */
+ * Configures the SysTick timer for the game speed.
+ ******************************************************************************/
 void configureSysTick(uint32_t reloadValue)
 {
     SysTick->LOAD  = reloadValue - 1;
@@ -146,11 +148,15 @@ void configureSysTick(uint32_t reloadValue)
                      SysTick_CTRL_ENABLE_Msk;
 }
 
-/**
- * @brief Configures Timer 2 for button debouncing.
+/***********************************************************************
+ * @ConfigureTimer()
  * @param None
  * @return None
- */
+ * Configures Timer 2 for button debouncing. 
+* This config ensures that debouncing is happening faster then the Systick.
+* Since Systick handles the game speed, the timer ensures the button reponse
+* time is quick.
+ **********************************************************************/
 void configureTimer(void)
 {
     RCC->APB1ENR1 |= RCC_APB1ENR1_TIM2EN;
@@ -165,7 +171,8 @@ void configureTimer(void)
  * TIM2_IRQHandler(void)
  * @param None
  * @return None
- * Timer 2 interrupt handles button debouncing.
+ * Timer 2 interrupt handles button debouncing. 
+ * The decouncer 
  ******************************************************/
 void TIM2_IRQHandler(void)
 {
@@ -189,48 +196,49 @@ void TIM2_IRQHandler(void)
     }
 }
 
-/**
- * @brief SysTick interrupt handler for game state progression.
+/***************************************************************
+ * Systick_Handler()
  * @param None
  * @return None
- */
+ * SysTick interrupt handler for game state progression.
+ *************************************************************/
 void SysTick_Handler(void)
 {
     msTimer++;
-
+    // State machine logic
     if (led_mode == PLAY_MODE)
     {
-        switch (gameState)
+        switch (gameState) // state machine
         {
-            case STATE_SERVE:
-                serve();
-                if ((currentServer == 1 && buttons[BTN_LEFT].state == 0) ||
-                    (currentServer == 0 && buttons[BTN_RIGHT].state == 0))
-                {
-                    if (ledPattern == 0x01)
-                        gameState = STATE_SHIFT_LEFT;
-                    else if (ledPattern == 0x80)
-                        gameState = STATE_SHIFT_RIGHT;
-                }
-                break;
+        case STATE_SERVE: // begin serve
+            serve(); // call serve function
+            if ((currentServer == 1 && buttons[BTN_LEFT].state == 0) ||
+               (currentServer == 0 && buttons[BTN_RIGHT].state == 0)) // 
+              {
+         if (ledPattern == 0x01)
+             gameState = STATE_SHIFT_LEFT;
+         else if (ledPattern == 0x80)
+             gameState = STATE_SHIFT_RIGHT;
+              }
+         break;
 
-           case STATE_SHIFT_LEFT:
-    if (buttons[BTN_RIGHT].state == 0)
-    {
+        case STATE_SHIFT_LEFT:
+        if (buttons[BTN_RIGHT].state == 0)
+        {
         if (ledPattern == 0x80)
             gameState = STATE_RIGHT_HIT;
         else if (ledPattern == 0x40)
             gameState = STATE_RIGHT_MISS;
         // Other values are ignored
+        }
+        else if (!shiftLeft())
+        {
+      gameState = STATE_RIGHT_MISS;
     }
-    else if (!shiftLeft())
-    {
-        gameState = STATE_RIGHT_MISS;
-    }
-    break;
+        break;
 
-case STATE_SHIFT_RIGHT:
-    if (buttons[BTN_LEFT].state == 0)
+        case STATE_SHIFT_RIGHT:
+        if (buttons[BTN_LEFT].state == 0)
     {
         if (ledPattern == 0x01)
             gameState = STATE_LEFT_HIT;
@@ -238,79 +246,79 @@ case STATE_SHIFT_RIGHT:
             gameState = STATE_LEFT_MISS;
         // Other values are ignored
     }
-    else if (!shiftRight())
+      else if (!shiftRight())
     {
         gameState = STATE_LEFT_MISS;
     }
-    break;
+        break;
 
-            case STATE_RIGHT_HIT:
-                if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
-                    currentSpeed -= SPEED_STEP;
-                configureSysTick(currentSpeed);
-                gameState = STATE_SHIFT_RIGHT;
-                break;
+        case STATE_RIGHT_HIT:
+          if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
+             currentSpeed -= SPEED_STEP;
+             configureSysTick(currentSpeed);
+            gameState = STATE_SHIFT_RIGHT;
+           break;
 
-            case STATE_LEFT_HIT:
-                if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
-                    currentSpeed -= SPEED_STEP;
-                configureSysTick(currentSpeed);
-                gameState = STATE_SHIFT_LEFT;
-                break;
+        case STATE_LEFT_HIT:
+        if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
+         currentSpeed -= SPEED_STEP;
+         configureSysTick(currentSpeed); // Increase the game speed
+           gameState = STATE_SHIFT_LEFT;
+       break;
 
-            case STATE_RIGHT_MISS:
-                player1Score++;
-                updatePlayerScore(player1Score, 1);
-                if (player1Score >= 3) {
-                    gameState = STATE_WIN;
-                    break;
+         case STATE_RIGHT_MISS:
+           player1Score++;
+           updatePlayerScore(player1Score, 1);
+           if (player1Score >= 3) {
+            gameState = STATE_WIN;
+             break;
+             }
+           currentSpeed = INITIAL_SPEED;
+            configureSysTick(currentSpeed);
+            currentServer = 0;
+            serve();
+          gameState = STATE_SERVE;
+         break;
+
+         case STATE_LEFT_MISS:
+             player2Score++;
+             updatePlayerScore(player2Score, 2);
+             if (player2Score >= 3) {
+                  gameState = STATE_WIN;
+         break;
                 }
-                currentSpeed = INITIAL_SPEED;
-                configureSysTick(currentSpeed);
-                currentServer = 0;
-                serve();
-                gameState = STATE_SERVE;
-                break;
+          currentSpeed = INITIAL_SPEED;
+          configureSysTick(currentSpeed);
+          currentServer = 1;
+          serve();
+          gameState = STATE_SERVE;
+         break;
 
-            case STATE_LEFT_MISS:
-                player2Score++;
-                updatePlayerScore(player2Score, 2);
-                if (player2Score >= 3) {
-                    gameState = STATE_WIN;
-                    break;
-                }
-                currentSpeed = INITIAL_SPEED;
-                configureSysTick(currentSpeed);
-                currentServer = 1;
-                serve();
-                gameState = STATE_SERVE;
-                break;
-
-            case STATE_WIN:
-                if (player1Score >= 3)
-                    flashWinnerScore(1);
-                else if (player2Score >= 3)
-                    flashWinnerScore(2);
-
-                player1Score = 0;
-                player2Score = 0;
-                updatePlayerScore(0, 1);
-                updatePlayerScore(0, 2);
-                currentSpeed = INITIAL_SPEED;
-                configureSysTick(currentSpeed);
-                currentServer = 1;
-                serve();
-                gameState = STATE_SERVE;
-                break;
+         case STATE_WIN:
+           if (player1Score >= 3)
+            flashWinnerScore(1);
+          else if (player2Score >= 3)
+            flashWinnerScore(2);
+        // Reset Pong game
+         player1Score = 0;
+         player2Score = 0;
+           updatePlayerScore(0, 1);
+         updatePlayerScore(0, 2);
+           currentSpeed = INITIAL_SPEED;
+          configureSysTick(currentSpeed);
+          currentServer = 1;
+          serve();
+          gameState = STATE_SERVE;
+          break;
         }
     }
 }
-/**
- * @brief Handles logic for FLASH_LED_MODE
- * Only one LED is on at a time, and button presses shift it left or right.
+/**********************************
+ * handleFlashLedMode(void)
  * @param None
  * @return None
- */
+ * Only one LED is on at a time, and button presses shift it left or right.
+ *************************************************************/
 void handleFlashLedMode(void)
 {
     static uint8_t prevLeftBtn = 1;
@@ -320,7 +328,7 @@ void handleFlashLedMode(void)
     uint8_t currRightBtn = buttons[BTN_RIGHT].state;
 
     uint8_t currentPattern = getCurrentLedPattern();
-
+    // Check for rising edge (User button press)
     if (prevLeftBtn == 0 && currLeftBtn == 1)
     {
         if (currentPattern == 0x80)
