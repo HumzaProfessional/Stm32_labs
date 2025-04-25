@@ -3,7 +3,7 @@
 #include "buttons.h"
 
 /**
- ******************************************
+ ===================================================================
  * @file main.c
  * @brief 1D Pong game main file
  * @author Humza Rana & Mac
@@ -14,11 +14,11 @@
  *  PLAY_MODE and FLASH_LED_MODE.
  *  Two buttons are used to interact with the game and SysTick is
  *  used for regular timing.
-    In PLAY_MODE, a pong game is emulated using a led array.
-    The farthest left and right leds(blue and red) are the "paddles".
+ *  In PLAY_MODE, a pong game is emulated using a led array.
+ *  The farthest left and right leds(blue and red) are the "paddles".
  *  The user button toggles between modes. 
  *   Debouncing is handled by Timer2 interupt.
- ******************************************
+ ===========================================================================
  */
 
 // === Configuration ===
@@ -318,13 +318,13 @@ void SysTick_Handler(void)
     }
 }
 
-/**********************************
+/*****************************************************************************
  * handleFlashLedMode(void)
  * @param None
  * @return None
  * Only one LED is on at a time, and button presses shift it left or right.
  * A press and hold of the buttons are ensured.
- *************************************************************/
+ *****************************************************************************/
 void handleFlashLedMode(void)
 {
     static uint8_t prevLeftBtn = 1;
