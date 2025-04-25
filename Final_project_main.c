@@ -3,7 +3,7 @@
 #include "buttons.h"
 
 /**
- ******************************************
+ ================================================================
  * @file main.c
  * @brief Main program file for 1D Pong game
  * @author Humza Rana & Mac
@@ -15,7 +15,7 @@
  *  Two buttons are used to interact with the game and SysTick is
  *  used for regular timing.
  *  The user button toggles between modes. Debouncing is used.
- ******************************************
+ *===============================================================
  */
 
 // === Configuration ===
@@ -272,10 +272,10 @@ void SysTick_Handler(void)
        }
    }
 }
-/**
+/***********************************************************************
  * @brief Handles logic for FLASH_LED_MODE
  * Only one LED is on at a time, and button presses shift it left or right.
- */
+ **************************************************************************/
 void handleFlashLedMode(void)
 {
     static uint8_t prevLeftBtn = 1;
