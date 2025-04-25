@@ -205,6 +205,7 @@ void TIM2_IRQHandler(void)
 void SysTick_Handler(void)
 {
     msTimer++;
+
     // State machine logic
     if (led_mode == PLAY_MODE)
     {
@@ -212,112 +213,117 @@ void SysTick_Handler(void)
         {
         case STATE_SERVE: // begin serve
             serve(); // call serve function
+
+            // Wait for current server to press their respective button
             if ((currentServer == 1 && buttons[BTN_LEFT].state == 0) ||
-               (currentServer == 0 && buttons[BTN_RIGHT].state == 0)) // 
-              {
-         if (ledPattern == 0x01)
-             gameState = STATE_SHIFT_LEFT;
-         else if (ledPattern == 0x80)
-             gameState = STATE_SHIFT_RIGHT;
-              }
-         break;
+                (currentServer == 0 && buttons[BTN_RIGHT].state == 0)) 
+            {
+                if (ledPattern == 0x01) // If at player 1's paddle, shift left
+                    gameState = STATE_SHIFT_LEFT;
+                else if (ledPattern == 0x80) // if at player 2's paddle, shift right
+                    gameState = STATE_SHIFT_RIGHT;
+            }
+            break;
 
         case STATE_SHIFT_LEFT:
-        if (buttons[BTN_RIGHT].state == 0)
-        {
-        if (ledPattern == 0x80)
-            gameState = STATE_RIGHT_HIT;
-        else if (ledPattern == 0x40)
-            gameState = STATE_RIGHT_MISS;
-        // Other values are ignored
-        }
-        else if (!shiftLeft())
-        {
-      gameState = STATE_RIGHT_MISS;
-    }
-        break;
+            if (buttons[BTN_RIGHT].state == 0) // check if the right button was pressed
+            {
+                if (ledPattern == 0x80)
+                    gameState = STATE_RIGHT_HIT; // if button is hit on paddle, it bounces back.
+                else if (ledPattern == 0x40)
+                    gameState = STATE_RIGHT_MISS; // if pressed early it's a miss
+                // Other values are ignored
+            }
+            else if (!shiftLeft()) // if we can't shift further, it's a miss
+            {
+                gameState = STATE_RIGHT_MISS; // ball passed player 2
+            }
+            break;
 
         case STATE_SHIFT_RIGHT:
-        if (buttons[BTN_LEFT].state == 0)
-    {
-        if (ledPattern == 0x01)
-            gameState = STATE_LEFT_HIT;
-        else if (ledPattern == 0x02)
-            gameState = STATE_LEFT_MISS;
-        // Other values are ignored
-    }
-      else if (!shiftRight())
-    {
-        gameState = STATE_LEFT_MISS;
-    }
-        break;
+            if (buttons[BTN_LEFT].state == 0) // check if left button was pressed.
+            {
+                if (ledPattern == 0x01)
+                    gameState = STATE_LEFT_HIT; // if button is hit on paddle, it bounces back.
+                else if (ledPattern == 0x02)
+                    gameState = STATE_LEFT_MISS; // if pressed early it's a miss
+                // Other values are ignored
+            }
+            else if (!shiftRight()) // if we can't shift further, it's a miss
+            {
+                gameState = STATE_LEFT_MISS; // ball passed player 1
+            }
+            break;
 
         case STATE_RIGHT_HIT:
-          if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
-             currentSpeed -= SPEED_STEP;
-             configureSysTick(currentSpeed);
-            gameState = STATE_SHIFT_RIGHT;
-           break;
+            if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
+                currentSpeed -= SPEED_STEP; // make it faster
+            configureSysTick(currentSpeed); // apply new speed
+            gameState = STATE_SHIFT_RIGHT; // bounce back to player 1
+            break;
 
         case STATE_LEFT_HIT:
-        if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
-         currentSpeed -= SPEED_STEP;
-         configureSysTick(currentSpeed); // Increase the game speed
-           gameState = STATE_SHIFT_LEFT;
-       break;
+            if (currentSpeed > MAX_SPEED_TICKS + SPEED_STEP)
+                currentSpeed -= SPEED_STEP;
+            configureSysTick(currentSpeed); // Increase the game speed
+            gameState = STATE_SHIFT_LEFT; // bounce back to player 2
+            break;
 
-         case STATE_RIGHT_MISS:
-           player1Score++;
-           updatePlayerScore(player1Score, 1);
-           if (player1Score >= 3) {
-            gameState = STATE_WIN;
-             break;
-             }
-           currentSpeed = INITIAL_SPEED;
+        case STATE_RIGHT_MISS:
+            player1Score++; // player 1 gets a point
+            updatePlayerScore(player1Score, 1);
+            if (player1Score >= 3) {
+                gameState = STATE_WIN; // check if player 1 wins
+                break;
+            }
+            currentSpeed = INITIAL_SPEED; // reset speed
             configureSysTick(currentSpeed);
-            currentServer = 0;
-            serve();
-          gameState = STATE_SERVE;
-         break;
+            currentServer = 0; // switch to player 2 serving
+            serve(); // new serve
+            gameState = STATE_SERVE;
+            break;
 
-         case STATE_LEFT_MISS:
-             player2Score++;
-             updatePlayerScore(player2Score, 2);
-             if (player2Score >= 3) {
-                  gameState = STATE_WIN;
-         break;
-                }
-          currentSpeed = INITIAL_SPEED;
-          configureSysTick(currentSpeed);
-          currentServer = 1;
-          serve();
-          gameState = STATE_SERVE;
-         break;
+        case STATE_LEFT_MISS:
+            player2Score++; // player 2 gets a point
+            updatePlayerScore(player2Score, 2);
+            if (player2Score >= 3) {
+                gameState = STATE_WIN; // check if player 2 wins
+                break;
+            }
+            currentSpeed = INITIAL_SPEED; // reset speed
+            configureSysTick(currentSpeed);
+            currentServer = 1; // switch to player 1 serving
+            serve(); // new serve
+            gameState = STATE_SERVE;
+            break;
 
-         case STATE_WIN:
-           if (player1Score >= 3)
-            flashWinnerScore(1);
-          else if (player2Score >= 3)
-            flashWinnerScore(2);
-        // Reset Pong game
-         player1Score = 0;
-         player2Score = 0;
-           updatePlayerScore(0, 1);
-         updatePlayerScore(0, 2);
-           currentSpeed = INITIAL_SPEED;
-          configureSysTick(currentSpeed);
-          currentServer = 1;
-          serve();
-          gameState = STATE_SERVE;
-          break;
+        case STATE_WIN:
+            if (player1Score >= 3)
+                flashWinnerScore(1); // flash winning LEDs for player 1
+            else if (player2Score >= 3)
+                flashWinnerScore(2); // flash winning LEDs for player 2
+
+            // Reset Pong game
+            player1Score = 0;
+            player2Score = 0;
+            updatePlayerScore(0, 1);
+            updatePlayerScore(0, 2);
+            currentSpeed = INITIAL_SPEED;
+            configureSysTick(currentSpeed);
+            currentServer = 1;
+            serve(); // return to beginning state
+            gameState = STATE_SERVE;
+            break;
         }
     }
 }
+
 /**********************************
  * handleFlashLedMode(void)
  * @param None
  * @return None
  * Only one LED is on at a time, and button presses shift it left or right.
+ * A press and hold of the buttons are ensured.
  *************************************************************/
 void handleFlashLedMode(void)
 {
@@ -325,26 +331,26 @@ void handleFlashLedMode(void)
     static uint8_t prevRightBtn = 1;
 
     uint8_t currLeftBtn = buttons[BTN_LEFT].state;
-    uint8_t currRightBtn = buttons[BTN_RIGHT].state;
-
+    uint8_t currRightBtn = buttons[BTN_RIGHT].state; // ensure a button press and release happens
+    
     uint8_t currentPattern = getCurrentLedPattern();
     // Check for rising edge (User button press)
     if (prevLeftBtn == 0 && currLeftBtn == 1)
     {
         if (currentPattern == 0x80)
-            setLedPattern(0x01);
+            setLedPattern(0x01); // go the opposite edge
         else
-            setLedPattern(currentPattern << 1);
+            setLedPattern(currentPattern << 1); // shift by 1
     }
 
     if (prevRightBtn == 0 && currRightBtn == 1)
     {
         if (currentPattern == 0x01)
-            setLedPattern(0x80);
+            setLedPattern(0x80); // go to opposite edge
         else
-            setLedPattern(currentPattern >> 1);
+            setLedPattern(currentPattern >> 1); // shift by 1
     }
 
     prevLeftBtn = currLeftBtn;
-    prevRightBtn = currRightBtn;
+    prevRightBtn = currRightBtn; // update the values for the buttons
 }
